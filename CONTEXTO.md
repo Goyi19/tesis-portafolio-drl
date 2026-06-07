@@ -19,7 +19,8 @@
 * **Rúbrica de Redacción (Crítico):** Toda la escritura debe seguir formato estrictamente académico: tercera persona (voz impersonal), estilo formal, párrafos con una sola idea principal, uso de conectores discursivos, y estilo de citas Harvard.
 
 ## 4. Próximos Pasos Inmediatos
-* **Paso Actual:** Continuar con la redacción y revisión de la tesis en base a la "Rúbrica de Escritura".
+* **Pendiente para Cierre de Resultados:** Integrar los valores del benchmark teórico GAMS (los cuales se generarán externamente por problemas de licencia) en los gráficos actuales. Esto permitirá tener la curva de GAMS comparada lado a lado con los 20 modelos entrenados (PPO, SAC) y los benchmarks actuales (Naive B&H).
+* **Paso Actual:** Iniciar la redacción de los capítulos de la tesis en simultáneo, de acuerdo a la "Rúbrica de Escritura", sin necesidad de esperar la integración final de la curva GAMS.
 * *(Nota: Actualizar este punto al finalizar cada sesión de trabajo para detallar exactamente en qué capítulo, párrafo o sección de la memoria nos quedamos trabajando)*.
 
 ---
