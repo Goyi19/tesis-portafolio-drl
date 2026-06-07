@@ -1,0 +1,51 @@
+\chapter{Metodología y Formulación del Modelo}
+
+En este capítulo se detalla la construcción y diseño del modelo propuesto para la optimización dinámica de portafolios de inversión utilizando algoritmos de Deep Reinforcement Learning (DRL). El enfoque metodológico se fundamenta en la implementación real desarrollada en Python, donde se estructuró un entorno de simulación personalizado que modela la interacción del agente con el mercado, la gestión del riesgo y las fricciones transaccionales. Se abordan los procesos de adquisición y transformación de datos, la formulación rigurosa del Proceso de Decisión de Markov Parcialmente Observable (POMDP), el diseño del entorno compatible con la interfaz Gym, y la configuración arquitectónica de los agentes PPO y SAC.
+
+\section{Datos y Preprocesamiento}
+La materia prima para el entrenamiento y evaluación de los agentes proviene de series de tiempo financieras de dos activos representativos: el índice S\&P 500 (SPX), que refleja el mercado accionario tradicional, y el índice Cripto CMC200, que introduce una clase de activo alternativo con alta volatilidad y retornos potencialmente asimétricos. El horizonte temporal estudiado consta de datos semanales (163 semanas en total). 
+
+Para evitar sesgos y asegurar una correcta generalización del modelo, el conjunto de datos se particiona secuencialmente en tres subconjuntos: Entrenamiento (Train, 70\%), Validación (Val, 15\%) y Prueba (Test, 15\%). El preprocesamiento incluye la normalización Z-Score de las variables predictoras (retornos esperados, varianzas y covarianzas) para garantizar la estabilidad numérica en el entrenamiento de las redes neuronales, conservando los retornos reales sin normalizar exclusivamente para el cálculo fidedigno de la evolución del capital.
+
+\section{Formulación del MDP/POMDP}
+El problema de asignación de portafolio se modela como un Proceso de Decisión de Markov Parcialmente Observable (POMDP), definido por la tupla $\langle S, A, P, R, \gamma \rangle$, donde las dinámicas ocultas de los regímenes \textit{Bull} y \textit{Bear} exigen que el agente infiera el estado real del mercado a partir de observaciones parciales.
+
+\subsection{Espacio de Observación ($S$)}
+El vector de observación continuo, de dimensionalidad 9, suministrado al agente en el instante $t$, está compuesto por:
+\begin{itemize}
+    \item \textbf{Capital normalizado:} $x_t / x_0$, donde $x_0 = 10.000$ USD es el capital inicial.
+    \item \textbf{Pesos previos del portafolio:} $w_{t-1} = [w_{SPX, t-1}, w_{CMC, t-1}]$, para que el agente tenga consciencia de la distribución actual y pueda optimizar el recálculo de los costos de transacción.
+    \item \textbf{Fracción de tiempo temporal:} $t / T_{window}$, indicando la posición relativa dentro del horizonte de inversión.
+    \item \textbf{Características del mercado (\textit{features}):} Medias ($\mu$), varianzas ($\sigma^2$) y covarianzas mixtas normalizadas de los activos bajo los modelos ocultos.
+\end{itemize}
+Adicionalmente, durante el entrenamiento se incorpora inyección de ruido gaussiano estocástico ($\mathcal{N}(0, 0.001)$) al vector de observación como mecanismo de \textit{Data Augmentation}, mejorando la robustez del agente frente a variaciones inesperadas del mercado.
+
+\subsection{Espacio de Acción ($A$)}
+El agente emite un vector continuo $a_t \in [-1, 1]^2$. Dado que el portafolio exige estar completamente invertido (sin apalancamiento ni ventas en corto), la acción cruda es proyectada al símplex unitario ($\Delta^{n-1}$) mediante un recorte a valores no negativos ($a_{clipped} = \max(0, a_t)$) seguido de una normalización $w_t = a_{clipped} / \sum a_{clipped}$. Si la suma resulta cercana a cero, el entorno aplica un \textit{fallback} imponiendo una ponderación equitativa ($[0.5, 0.5]$).
+
+\subsection{Función de Recompensa ($R$)}
+La señal de recompensa emula matemáticamente la función objetivo del modelo de optimización clásico de GAMS, estableciendo un balance entre la maximización del retorno y la penalización por riesgo y fricciones del mercado. En cada paso $t$, la recompensa se calcula como:
+\begin{equation}
+    R_t = (w_t^T \mu) - \lambda (w_t^T \Sigma w_t) - c_t
+\end{equation}
+Donde:
+\begin{itemize}
+    \item $(w_t^T \mu)$ es el retorno esperado del portafolio.
+    \item $\lambda$ es el coeficiente de aversión al riesgo (establecido en $0.10$).
+    \item $(w_t^T \Sigma w_t)$ es la varianza esperada del portafolio.
+    \item $c_t$ representa los costos de transacción incurridos por la rotación del portafolio. Se calculan como $c_t = \sum |w_{i,t} - w_{i,t-1}| \cdot c_i$, asumiendo comisiones heterogéneas ($0.5\%$ para SPX y $1.0\%$ para CMC200).
+\end{itemize}
+Además, se impone una penalización severa ($-10.0$) si el capital llega a cero (ruina).
+
+\section{Diseño del Entorno (Gym)}
+El entorno personalizado \texttt{PortfolioEnv} hereda de la interfaz estándar de OpenAI Gym (ahora Gymnasium). La interacción se estructura en episodios. Durante el entrenamiento, para evitar sobreajuste temporal, se utiliza un mecanismo de inicialización aleatoria (\textit{Random Start}) sobre una ventana deslizante de 52 semanas. En fase de evaluación (Validación y Prueba), el entorno procesa el subconjunto de datos completo de manera secuencial determinista.
+
+La dinámica de transición actualiza el capital real en función del retorno financiero efectivo del periodo y deduce los costos transaccionales explícitamente:
+\begin{equation}
+    x_{t+1} = x_t \left( 1 + \sum_{i} (w_{i,t} \cdot R_{i,t}^{real}) - c_t \right)
+\end{equation}
+
+\section{Arquitectura y Configuración del Agente}
+La parametrización de las políticas se delega a redes neuronales profundas (MLP). El agente \textbf{PPO} es configurado para procesar lotes (minibatches) equivalentes a la longitud exacta de un episodio de entrenamiento, optimizando la función \textit{clipped surrogate} cada 10 \textit{rollouts} para garantizar la estabilidad de las estimaciones de ventaja (GAE). Se define un \textit{clip range} de $0.2$, un factor de descuento y una entropía controlada ($\text{ent\_coef} = 0.01$) para mantener un nivel moderado de exploración persistente.
+
+Para \textbf{SAC}, al ser un modelo \textit{off-policy}, la interacción se almacena en un \textit{Replay Buffer}. El agente optimiza redes de valor Q separadas mediante \textit{soft updates} minimizando el error de diferencia temporal. La naturaleza de máxima entropía de SAC resulta teóricamente ventajosa para descubrir estrategias diversificadas en un entorno de mercado donde converger prematuramente a una \textit{corner solution} compromete el rendimiento ajustado por riesgo fuera de la muestra.

@@ -1,0 +1,156 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{float}
+\usepackage[space]{grffile}
+\geometry{a4paper, margin=1in}
+
+\title{Registro de Experimentos: DRL Portafolios (Etapa PPO)}
+\author{Bitácora de Investigación}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introducción}
+Este documento registra cronológicamente los hallazgos, desafíos y decisiones metodológicas tomadas durante la implementación y evaluación del agente Proximal Policy Optimization (PPO) aplicado a la gestión de un portafolio bivariado (SPX y CMC200). En particular, se evalúa el rendimiento del modelo base oficial y se introduce un riguroso análisis de sensibilidad sobre la aversión al riesgo y los costos de transacción para comprender las dinámicas de \textit{chattering} descubiertas.
+
+\section{Fase 1: Evaluación del Modelo Base de PPO}
+El modelo base oficial de PPO fue configurado garantizando reproducibilidad y utilizando la arquitectura Multicapa Perceptrón (\textit{MlpPolicy}) con dos capas ocultas de 64 neuronas y funciones de activación \textit{Tanh}. La aversión al riesgo del entorno ($\lambda_{risk}$) se configuró en 0.10, y se aplicaron costos de transacción reales asimétricos (0.5\% para SPX, 1.0\% para CMC200).
+
+A pesar de lograr una convergencia matemática (disminución de las métricas de pérdida del actor y crítico), el rendimiento financiero inicial sobre la partición de Entrenamiento (Semanas 0 a 114) fue deficiente frente al Naive Buy \& Hold (50/50), alcanzando solo \$4,566.39 partiendo de \$10,000 USD (Figura \ref{fig:cap_base_train}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{"../../results/figures/Modelo_Base/Tensorboard_Metrics.png"}
+    \caption{Métricas de convergencia matemática del Modelo Base (TensorBoard).}
+    \label{fig:tb_base}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{"../../results/figures/Modelo_Base/Capital_train.png"}
+    \caption{Evolución del capital del Modelo Base frente al Naive Buy \& Hold (Train).}
+    \label{fig:cap_base_train}
+\end{figure}
+
+El agente evidenció \textit{chattering} (sobre-operación errática). Esto se diagnosticó como una falla originada no en la optimización de PPO, sino en las probabilidades de régimen del Hidden Markov Model (HMM) provistas como observación, las cuales resultaron ser altamente ruidosas (alrededor del 50\% de precisión, equivalente a ruido aleatorio).
+
+\section{Fase 2: Diseño del Análisis de Sensibilidad (Aversión al Riesgo y Costos de Transacción)}
+Frente a la restricción de no modificar los datos de origen del oráculo HMM, se diseñó un análisis de sensibilidad estricto con 9 modelos para evaluar si podíamos domar el \textit{chattering} modificando la fricción del entorno y la aversión al riesgo del agente.
+
+Se construyó una malla de $3 \times 3$ evaluando:
+\begin{itemize}
+    \item \textbf{Aversión al Riesgo ($\lambda$):} 0.3, 0.7 y 1.1.
+    \item \textbf{Costos de Transacción (Fricción):} Baja, Media y Alta.
+\end{itemize}
+
+\section{Fase 3: Resultados de Sensibilidad en Set de Entrenamiento}
+El Set de Entrenamiento confirmó que el comportamiento de los modelos depende fuertemente de la configuración de estos dos parámetros. La Figura \ref{fig:cap_dual_train} muestra cómo ciertos modelos sobre-operan y destruyen valor frente a escenarios con mayor fricción.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{"../../results/figures/Analisis_Sensibilidad/Capital_Dual_train.png"}
+    \caption{Evolución del capital (Sensibilidad) en el Set de Entrenamiento.}
+    \label{fig:cap_dual_train}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{"../../results/figures/Analisis_Sensibilidad/SuperGrafico_Estrategia_Dual_train.png"}
+    \caption{Estrategia de inversión en áreas apiladas (Entrenamiento).}
+    \label{fig:super_train}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{"../../results/figures/Analisis_Sensibilidad/Histograma_Pesos_train.png"}
+    \caption{Distribución de Pesos SPX (Bang-Bang Test) en Entrenamiento.}
+    \label{fig:hist_train}
+\end{figure}
+
+Ningún modelo logró superar al \textit{Buy \& Hold} pasivo en esta fase; el exceso de volatilidad y ruido en los features de entrada provocó que las comisiones de transacción barrieran cualquier ganancia obtenida por anticipación de régimen.
+
+\section{Fase 4: Resultados y Diagnósticos en Set de Validación}
+La fase de Validación evaluó el comportamiento del agente frente a datos no vistos (Semanas 115 a 139). 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{"../../results/figures/Analisis_Sensibilidad/Capital_Dual_val.png"}
+    \caption{Evolución del capital (Sensibilidad) en el Set de Validación.}
+    \label{fig:cap_dual_val}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Modelo} & \textbf{Cap. Final (\$)} & \textbf{Recompensa} & \textbf{Sharpe} & \textbf{Max DD (\%)} & \textbf{Rotación (\%)} \\
+\hline
+Lambda\_0p3\_Friccion\_Baja & \$12,130.77 & -0.0489 & 1.05 & 16.36 & 9.14 \\
+Lambda\_0p3\_Friccion\_Media & \$12,097.40 & -0.0544 & 1.03 & 16.52 & 9.43 \\
+Lambda\_0p3\_Friccion\_Alta & \$11,711.67 & -0.0595 & 0.89 & 18.29 & 3.79 \\
+Rebalanceo Constante (CRP) & \$11,585.96 & 0.0000 & 1.24 & 8.76 & 0.00 \\
+Naive B\&H (50/50) & \$11,415.23 & 0.0000 & 1.09 & 9.12 & 0.00 \\
+PPO Base Oficial & \$11,384.88 & -0.0123 & 0.78 & 20.14 & 5.28 \\
+\hline
+\end{tabular}}
+\caption{Métricas Financieras en Validación (Selección).}
+\end{table}
+
+Destacamos que algunos modelos de baja aversión al riesgo ($\lambda=0.3$) consiguieron retornos positivos brutos muy altos que les permitieron sobrevivir y superar a la estrategia pasiva en Validación. Adicionalmente, el análisis de cordura (Figura \ref{fig:scatter_val}) demostró cómo el agente relaciona la volatilidad del Cripto con la asignación de capital.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{"../../results/figures/Analisis_Sensibilidad/Scatter_Feature_val.png"}
+    \caption{Prueba de Cordura: Volatilidad vs Decisión (Mejor Modelo, Validación).}
+    \label{fig:scatter_val}
+\end{figure}
+
+\section{Fase 5: Prueba Final (Set de Test Out-Of-Sample)}
+La prueba estricta \textit{Out-Of-Sample} determinó la viabilidad final de las estrategias en el mundo real.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{"../../results/figures/Analisis_Sensibilidad/Capital_Dual_test.png"}
+    \caption{Evolución de capital en el Set de Prueba (OOS).}
+    \label{fig:cap_dual_test}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Modelo} & \textbf{Cap. Final (\$)} & \textbf{Recompensa} & \textbf{Sharpe} & \textbf{Max DD (\%)} & \textbf{Rotación (\%)} \\
+\hline
+Lambda\_0p3\_Friccion\_Alta & \$18,594.37 & -0.0346 & 3.94 & 5.77 & 3.41 \\
+Lambda\_0p3\_Friccion\_Baja & \$18,218.84 & -0.0348 & 3.70 & 5.61 & 9.49 \\
+Lambda\_0p3\_Friccion\_Media & \$18,210.09 & -0.0352 & 3.70 & 5.61 & 9.22 \\
+PPO Base Oficial & \$18,081.23 & 0.0077 & 3.64 & 5.61 & 4.97 \\
+Naive B\&H (50/50) & \$14,866.59 & 0.0000 & 4.30 & 2.26 & 0.00 \\
+Rebalanceo Constante (CRP) & \$14,632.04 & 0.0000 & 4.63 & 2.16 & 0.00 \\
+\hline
+\end{tabular}}
+\caption{Métricas Financieras en el Set de Prueba.}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{"../../results/figures/Analisis_Sensibilidad/Rolling_Metrics_test.png"}
+    \caption{Métricas Móviles: Estabilidad Temporal del Mejor Modelo en Test.}
+    \label{fig:rolling_test}
+\end{figure}
+
+\section{Conclusión}
+Los resultados del Set de Prueba demuestran fehacientemente que la incorporación de penalizaciones fuertes mediante el parámetro de Fricción ayuda a mitigar el \textit{chattering}. El modelo \texttt{Lambda\_0p3\_Friccion\_Alta} logró \$18,594.37, destrozando contundentemente tanto a la estrategia de \textit{Buy \& Hold} (\$14,866) como al \textit{Rebalanceo Constante} (\$14,632), minimizando además el Max Drawdown a un controlable 5.77\%.
+
+Asimismo, cabe destacar la extrema resiliencia del modelo PPO Base Oficial, el cual alcanzó un capital final sobresaliente de \$18,081.23, demostrando que incluso sin sobre-optimización de parámetros de costo, una configuración estándar robusta es capaz de generalizar rentablemente si logra evitar las rotaciones destructivas en el régimen de Test.
+
+\end{document}

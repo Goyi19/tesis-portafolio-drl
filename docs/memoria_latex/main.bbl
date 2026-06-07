@@ -1,0 +1,51 @@
+\begin{thebibliography}{}
+
+\bibitem[Baum and Petrie, 1966]{baum1966statistical}
+Baum, L.~E. and Petrie, T. (1966).
+\newblock Statistical inference for probabilistic functions of finite state
+  markov chains.
+\newblock {\em The annals of mathematical statistics}, 37(6):1554--1563.
+
+\bibitem[Bellman, 1957]{bellman1957markovian}
+Bellman, R. (1957).
+\newblock A markovian decision process.
+\newblock {\em Journal of mathematics and mechanics}, pages 679--684.
+
+\bibitem[Haarnoja et~al., 2018]{haarnoja2018soft}
+Haarnoja, T., Zhou, A., Abbeel, P., and Levine, S. (2018).
+\newblock Soft actor-critic: Off-policy maximum entropy deep reinforcement
+  learning with a stochastic actor.
+\newblock In {\em International conference on machine learning}, pages
+  1861--1870. PMLR.
+
+\bibitem[Markowitz, 1952]{markowitz1952portfolio}
+Markowitz, H. (1952).
+\newblock Portfolio selection.
+\newblock {\em The Journal of Finance}, 7(1):77--91.
+
+\bibitem[Schulman et~al., 2017]{schulman2017proximal}
+Schulman, J., Wolski, F., Dhariwal, P., Radford, A., and Klimov, O. (2017).
+\newblock Proximal policy optimization algorithms.
+\newblock {\em arXiv preprint arXiv:1707.06347}.
+
+\bibitem[Shannon, 1948]{shannon1948mathematical}
+Shannon, C.~E. (1948).
+\newblock A mathematical theory of communication.
+\newblock {\em The Bell system technical journal}, 27(3):379--423.
+
+\bibitem[Sharpe, 1966]{sharpe1966mutual}
+Sharpe, W.~F. (1966).
+\newblock Mutual fund performance.
+\newblock {\em The Journal of Business}, 39(1):119--138.
+
+\bibitem[Sortino and Price, 1994]{sortino1994performance}
+Sortino, F.~A. and Price, L.~N. (1994).
+\newblock Performance measurement in a downside risk framework.
+\newblock {\em The Journal of Investing}, 3(3):59--64.
+
+\bibitem[Sutton and Barto, 2018]{sutton2018reinforcement}
+Sutton, R.~S. and Barto, A.~G. (2018).
+\newblock {\em Reinforcement learning: An introduction}.
+\newblock MIT press.
+
+\end{thebibliography}

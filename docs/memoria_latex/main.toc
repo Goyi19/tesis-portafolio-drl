@@ -1,0 +1,27 @@
+\babel@toc {spanish}{}\relax 
+\contentsline {chapter}{Resumen}{5}{}%
+\contentsline {chapter}{\numberline {1}Introducción}{6}{}%
+\contentsline {section}{\numberline {1.1}Contexto y Motivación}{6}{}%
+\contentsline {section}{\numberline {1.2}Definición del Problema}{6}{}%
+\contentsline {section}{\numberline {1.3}Objetivos}{7}{}%
+\contentsline {subsection}{\numberline {1.3.1}Objetivo General}{7}{}%
+\contentsline {subsection}{\numberline {1.3.2}Objetivos Específicos}{7}{}%
+\contentsline {chapter}{\numberline {2}Marco Teórico}{9}{}%
+\contentsline {section}{\numberline {2.1}Teoría de Portafolio Clásica}{9}{}%
+\contentsline {subsection}{\numberline {2.1.1}Modelo de Markowitz y Optimización Media-Varianza}{9}{}%
+\contentsline {subsection}{\numberline {2.1.2}Ratios de Desempeño: Sharpe y Sortino}{10}{}%
+\contentsline {subsection}{\numberline {2.1.3}Entropía de Shannon y Diversificación}{10}{}%
+\contentsline {section}{\numberline {2.2}Deep Reinforcement Learning (DRL)}{10}{}%
+\contentsline {subsection}{\numberline {2.2.1}Proceso de Decisión de Markov (MDP) y Ecuación de Bellman}{10}{}%
+\contentsline {section}{\numberline {2.3}Algoritmos PPO y SAC}{11}{}%
+\contentsline {subsection}{\numberline {2.3.1}Proximal Policy Optimization (PPO)}{11}{}%
+\contentsline {subsection}{\numberline {2.3.2}Soft Actor-Critic (SAC)}{11}{}%
+\contentsline {section}{\numberline {2.4}Regímenes de Mercado y Modelos Ocultos}{12}{}%
+\contentsline {chapter}{\numberline {3}Metodología y Formulación del Modelo}{13}{}%
+\contentsline {section}{\numberline {3.1}Datos y Preprocesamiento}{13}{}%
+\contentsline {section}{\numberline {3.2}Formulación del MDP/POMDP}{14}{}%
+\contentsline {subsection}{\numberline {3.2.1}Espacio de Observación ($S$)}{14}{}%
+\contentsline {subsection}{\numberline {3.2.2}Espacio de Acción ($A$)}{14}{}%
+\contentsline {subsection}{\numberline {3.2.3}Función de Recompensa ($R$)}{14}{}%
+\contentsline {section}{\numberline {3.3}Diseño del Entorno (Gym)}{15}{}%
+\contentsline {section}{\numberline {3.4}Arquitectura y Configuración del Agente}{15}{}%

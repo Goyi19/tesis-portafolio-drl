@@ -1,0 +1,99 @@
+\documentclass[tikz,border=10pt]{standalone}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds, calc}
+
+\begin{document}
+
+\begin{tikzpicture}[
+    >=Latex,
+    node distance=1.5cm and 2cm,
+    font=\sffamily,
+    % Estilos de cajas
+    agentbox/.style={rectangle, rounded corners, draw=blue!60, fill=blue!5, very thick, align=center, inner sep=10pt},
+    envbox/.style={rectangle, rounded corners, draw=green!60!black, fill=green!5, very thick, align=center, inner sep=10pt},
+    mathbox/.style={rectangle, draw=gray!50, fill=white, align=center, inner sep=6pt},
+    arrowlabel/.style={fill=white, text=black, font=\footnotesize, align=center}
+]
+
+% -------------------------
+% AGENTE SAC (Izquierda)
+% -------------------------
+\node[agentbox] (actor) {
+    \textbf{Red Actor (Política Determinista $\mu_\theta$)}\\[1ex]
+    Input: $O_t$\\[1ex]
+    Salida: $a_t$ (Acción Continua)
+};
+
+
+
+\node[mathbox, below=1cm of actor] (buffer) {
+    \textbf{Replay Buffer ($\mathcal{D}$)}
+};
+
+\node[agentbox, below=1cm of buffer] (critic) {
+    \textbf{Doble Crítico Soft ($Q_{\phi_1}, Q_{\phi_2}$)}\\[1ex]
+    Input: $O_t, a_t$\\[1ex]
+    Salida: $Q(O_t, a_t)$
+};
+
+\node[mathbox, below=0.8cm of critic] (loss) {
+    \textbf{Optimizador SAC ($\alpha$, $\tau$)}
+};
+
+% Contenedor del Agente
+\begin{scope}[on background layer]
+    \node[rectangle, rounded corners, draw=blue!80, fill=blue!2, dashed, very thick, fit=(actor) (buffer) (critic) (loss), inner sep=15pt, label={[font=\large\bfseries, text=blue!80]above:Cerebro SAC (Agente Off-Policy)}] (agent_bg) {};
+\end{scope}
+
+% Conexiones internas Agente
+
+\draw[->, thick, blue, dashed] (buffer) -- (critic) node[midway, right, font=\footnotesize] {Minibatch};
+\draw[->, thick, blue, dashed] (critic) -- (loss) node[midway, right, font=\footnotesize] {Optimiza pesos};
+
+% -------------------------
+% ENTORNO (Derecha)
+% -------------------------
+\node[envbox, right=6cm of actor, yshift=-1.5cm] (proyeccion) {
+    \textbf{Proyección Símplex ($w_t$)}
+};
+
+\node[envbox, below=1.2cm of proyeccion] (dinamica) {
+    \textbf{Evolución Capital ($x_{t+1}$)}
+};
+
+\node[envbox, below=1.2cm of dinamica] (recompensa) {
+    \textbf{Reward Media-Varianza ($r_t$)}
+};
+
+% Contenedor del Entorno
+\begin{scope}[on background layer]
+    \node[rectangle, rounded corners, draw=green!60!black, fill=green!2, dashed, very thick, fit=(proyeccion) (dinamica) (recompensa), inner sep=15pt, label={[font=\large\bfseries, text=green!60!black]above:PortfolioEnv (Mercado)}] (env_bg) {};
+\end{scope}
+
+% Conexiones internas Entorno
+\draw[->, thick, green!60!black] (proyeccion) -- (dinamica);
+\draw[->, thick, green!60!black] (dinamica) -- (recompensa);
+
+% -------------------------
+% INTERACCIONES (Ciclo RL)
+% -------------------------
+% Acción: Agente -> Entorno
+\draw[->, line width=1.5pt, orange] (actor) -- (proyeccion) node[midway, arrowlabel] {Acción Continua\\$a_t \in \mathbb{R}^{|I|}$};
+
+% La señal de recompensa va al buffer
+\draw[->, line width=1.5pt, red] (recompensa.west) -- (buffer.east) node[midway, fill=white, font=\footnotesize, align=center] {Transición\\$(O_t, a_t, r_t, O_{t+1})$};
+
+% Observación: Entorno -> Actor y Crítico
+\coordinate (obs_out) at ($(recompensa.south) + (0, -0.5)$);
+\draw[line width=1.5pt, purple] (recompensa.south) -- (obs_out);
+\draw[line width=1.5pt, purple] (obs_out) -| ($(agent_bg.west) + (-1.5, 0)$) |- (actor.west) 
+    node[pos=0.10, arrowlabel, xshift=3.5cm] {\textbf{Vector de Observación} $O_{t+1}$\\$O_{t+1} = \left[x_{t+1}, w_t, \frac{t}{T}, \text{norm\_}\mu_{\text{mix}}, \text{norm\_var}_{\text{mix}}, \text{norm\_cov}_{\text{mix}}\right]$};
+
+% La observación también va al crítico (y buffer)
+\draw[->, line width=1.5pt, purple] ($(agent_bg.west) + (-1.5, 0)$) |- (critic.west);
+
+\end{tikzpicture}
+
+\end{document}

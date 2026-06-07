@@ -1,0 +1,331 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{listings}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\bfseries\color{blue},
+  commentstyle=\itshape\color{gray},
+  breaklines=true,
+  frame=single,
+  backgroundcolor=\color{yellow!5},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+}
+
+\title{\textbf{Clase 0: Lectura Completa del Modelo GAMS (\texttt{ps.gms})}}
+\author{Fase Cero - Tesis Portafolio DRL}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Propósito de este Documento}
+Este apunte deconstruye línea por línea el archivo \texttt{ps.gms}, que constituye la implementación del modelo de optimización de portafolios con regímenes HMM en GAMS. Comprender cada instrucción es requisito obligatorio antes de (a) trasladar la lógica a DRL y (b) identificar qué parámetros son \textbf{inputs compartidos} y cuáles son \textbf{resultados exclusivos} del optimizador.
+
+% ============================================================
+\section{Bloque 0: Conjuntos y Alias}
+% ============================================================
+
+\begin{lstlisting}[language=]
+SETS
+   i   'activos'    / SPX, CMC200 /
+   k   'estados'    / bear, bull /
+   t   'periodos'   / t1*t163 / ;
+ALIAS (i,j);
+\end{lstlisting}
+
+\subsection{Explicación}
+\begin{itemize}
+    \item \textbf{Set $i$:} Define los dos activos del portafolio. \texttt{SPX} corresponde al índice S\&P 500 y \texttt{CMC200} a un índice de las 200 criptomonedas de mayor capitalización.
+    \item \textbf{Set $k$:} Los dos regímenes ocultos del modelo HMM. \texttt{bear} = mercado bajista (alta volatilidad) y \texttt{bull} = mercado alcista (baja volatilidad).
+    \item \textbf{Set $t$:} Horizonte temporal de 163 periodos semanales.
+    \item \textbf{ALIAS $(i,j)$:} Crea un clon del índice $i$ para poder escribir sumas dobles como $\sum_{i,j}$ en las matrices de covarianza.
+\end{itemize}
+
+% ============================================================
+\section{Bloque 1: Datos Exógenos (Tablas de Input)}
+% ============================================================
+
+\subsection{1.1 Probabilidades HMM}
+\begin{lstlisting}[language=]
+TABLE prob_spx(t,k)   'Probabilidades para SPX'
+                  bear               bull
+t1                0.098...           0.901...
+t2                0.914...           0.085...
+...
+\end{lstlisting}
+
+Estas tablas contienen la probabilidad de que cada activo se encuentre en régimen \texttt{bear} o \texttt{bull} en cada periodo $t$. Son el resultado de un modelo \textbf{Hidden Markov Model (HMM)} estimado previamente y de forma externa.
+
+\textbf{Notación formal:} $P_i(k, t) = \Pr(\text{activo } i \text{ está en régimen } k \text{ en periodo } t)$.
+
+\textit{Nota Crítica:} Cada activo tiene sus propias probabilidades independientes. El SPX puede estar en \texttt{bull} mientras CMC200 está en \texttt{bear}.
+
+\subsection{1.2 Retornos Semanales Observados}
+\begin{lstlisting}[language=]
+PARAMETER ret_semanal_spx(t) / t1 0.0214..., t2 -0.0330..., ... /;
+PARAMETER ret_semanal_cmc200(t) / t1 0.0487..., t2 -0.0559..., ... /;
+\end{lstlisting}
+
+Estos son los retornos netos reales (históricos) de cada activo en cada periodo. Son \textbf{Ground Truth}: lo que efectivamente ocurrió en el mercado.
+
+\textbf{Notación formal:} $R_{i,t}$ = retorno neto del activo $i$ en periodo $t$.
+
+\subsection{1.3 Consolidación de Parámetros}
+\begin{lstlisting}[language=]
+PARAMETER r(i,t), p(i,k,t);
+r('SPX',t)       = ret_semanal_spx(t);
+r('CMC200',t)    = ret_semanal_cmc200(t);
+p('SPX',k,t)     = prob_spx(t,k);
+p('CMC200',k,t)  = prob_cmc200(t,k);
+\end{lstlisting}
+
+Simplemente reorganiza las tablas anteriores en dos parámetros indexados genéricamente:
+\begin{itemize}
+    \item $r(i,t)$: Retorno del activo $i$ en $t$.
+    \item $p(i,k,t)$: Probabilidad del activo $i$ de estar en régimen $k$ en $t$.
+\end{itemize}
+
+% ============================================================
+\section{Bloque 2: Estimación de Momentos (El Corazón Estadístico)}
+% ============================================================
+
+\textbf{Este es el bloque más importante de todo el archivo.} Aquí se calculan las medias y covarianzas condicionales por régimen, y luego se mezclan para obtener los parámetros que alimentarán la función objetivo.
+
+\subsection{2.1 Denominadores de Ponderación}
+\begin{lstlisting}[language=]
+den_mu(i,k)    = sum(t, p(i,k,t));
+den_sig(i,j,k) = sum(t, p(i,k,t)*p(j,k,t));
+\end{lstlisting}
+
+\textbf{Qué hacen:} Suman las probabilidades a lo largo de \textit{todos} los periodos para crear un denominador de normalización.
+
+\textbf{Ecuaciones:}
+\begin{align}
+    D^{\mu}_{i,k} &= \sum_{t=1}^{163} P_i(k,t) \\
+    D^{\sigma}_{i,j,k} &= \sum_{t=1}^{163} P_i(k,t) \cdot P_j(k,t)
+\end{align}
+
+\colorbox{yellow!30}{\parbox{0.9\textwidth}{
+\textbf{ALERTA CRÍTICA (Hallazgo Post-Reunión):} Estos denominadores usan $\sum_{t=1}^{163}$, es decir, \textbf{todos los periodos del dataset de golpe}. Esto significa que el $\hat{\mu}$ y $\hat{\sigma}$ que se calculan a continuación son estimaciones globales que miran hacia adelante (\textit{look-ahead}). En un contexto DRL secuencial, esto constituye \textbf{data leakage} si se pasan tal cual. La solución del profesor es que para cada $t$, el $\hat{\mu}$ debe estimarse solo con datos $\{1, \ldots, t\}$.
+}}
+
+\subsection{2.2 Media Condicional por Régimen ($\hat{\mu}$)}
+\begin{lstlisting}[language=]
+mu_hat(i,k)$(den_mu(i,k) > 0) =
+    sum(t, p(i,k,t)*r(i,t)) / den_mu(i,k);
+\end{lstlisting}
+
+\textbf{Ecuación:}
+\begin{equation}
+    \hat{\mu}_{i,k} = \frac{\sum_{t=1}^{T} P_i(k,t) \cdot R_{i,t}}{\sum_{t=1}^{T} P_i(k,t)}
+\end{equation}
+
+\textbf{Interpretación:} Es un promedio ponderado de los retornos observados, donde el peso de cada observación es la probabilidad de estar en el régimen $k$. Por ejemplo, $\hat{\mu}_{SPX, bear}$ es el retorno promedio del SPX condicionado a las semanas en que el modelo HMM cree que el mercado estaba en crisis.
+
+\textbf{Resultado:} Se obtiene un escalar $\hat{\mu}_{i,k}$ para cada combinación activo-régimen (4 valores en total: SPX-bear, SPX-bull, CMC200-bear, CMC200-bull).
+
+\colorbox{yellow!30}{\parbox{0.9\textwidth}{
+\textbf{PROBLEMA PARA DRL:} Este $\hat{\mu}_{i,k}$ es calculado con las 163 semanas completas. En DRL, cuando la IA está en $t=5$, solo debería conocer los datos de $t=1$ a $t=5$. Por tanto, necesitamos un $\hat{\mu}_{i,k}^{(t)}$ \textbf{rolling} (expansivo) que se recalcule en cada paso usando solo el pasado.
+}}
+
+\subsection{2.3 Covarianza Condicional por Régimen ($\hat{\sigma}$)}
+\begin{lstlisting}[language=]
+sigma_hat(i,j,k)$(den_sig(i,j,k) > 0) =
+    sum(t, p(i,k,t)*p(j,k,t)
+          *(r(i,t)-mu_hat(i,k))*(r(j,t)-mu_hat(j,k))) / den_sig(i,j,k);
+\end{lstlisting}
+
+\textbf{Ecuación:}
+\begin{equation}
+    \hat{\sigma}_{i,j,k} = \frac{\sum_{t=1}^{T} P_i(k,t) \cdot P_j(k,t) \cdot (R_{i,t} - \hat{\mu}_{i,k})(R_{j,t} - \hat{\mu}_{j,k})}{\sum_{t=1}^{T} P_i(k,t) \cdot P_j(k,t)}
+\end{equation}
+
+\textbf{Interpretación:} Es la covarianza entre activos $i$ y $j$ condicionada al régimen $k$. Los retornos se centran usando el $\hat{\mu}_{i,k}$ calculado en el paso anterior, y se ponderan doblemente por las probabilidades de ambos activos.
+
+\textbf{Resultado:} Una matriz $2 \times 2$ por cada régimen (bear y bull). En total, 8 valores (pero la simetría reduce a 6 únicos).
+
+\subsection{2.4 Mezcla por Periodo: Los Famosos $\mu_{mix}$ y $\sigma_{mix}$}
+\begin{lstlisting}[language=]
+mu_mix(i,t) = sum(k, p(i,k,t)*mu_hat(i,k));
+sigma_mix(i,j,t) = sum(k, p(i,k,t)*p(j,k,t)*sigma_hat(i,j,k));
+\end{lstlisting}
+
+\textbf{Ecuaciones:}
+\begin{align}
+    \mu_{mix}(i,t) &= \sum_{k \in K} P_i(k,t) \cdot \hat{\mu}_{i,k} \\
+    \sigma_{mix}(i,j,t) &= \sum_{k \in K} P_i(k,t) \cdot P_j(k,t) \cdot \hat{\sigma}_{i,j,k}
+\end{align}
+
+\textbf{Interpretación:} Aquí es donde se ``mezclan'' los dos mundos (bear y bull). Para cada periodo $t$, la media esperada del activo $i$ es un promedio ponderado de su media-bear y su media-bull, donde los pesos son las probabilidades HMM de ese instante.
+
+\textbf{Ejemplo numérico:} Si en $t_5$, $P_{SPX}(bear) = 0.676$ y $\hat{\mu}_{SPX, bear} = -0.003$, $\hat{\mu}_{SPX, bull} = 0.012$:
+$$\mu_{mix}(SPX, t_5) = 0.676 \cdot (-0.003) + 0.324 \cdot 0.012 = 0.00186$$
+
+\colorbox{yellow!30}{\parbox{0.9\textwidth}{
+\textbf{CONSECUENCIA:} Dado que $\hat{\mu}_{i,k}$ es un escalar global (calculado con todos los $T$), el $\mu_{mix}(i,t)$ varía entre periodos \textbf{solo} porque $P_i(k,t)$ cambia, no porque $\hat{\mu}$ cambie. En la versión DRL correcta, tanto $P(k,t)$ como $\hat{\mu}^{(t)}$ deberían variar con $t$.
+}}
+
+\subsection{2.5 Simetrización Numérica}
+\begin{lstlisting}[language=]
+sigma_tmp(i,j,t) = sigma_mix(i,j,t);
+sigma_mix(i,j,t) = 0.5*(sigma_tmp(i,j,t) + sigma_tmp(j,i,t));
+\end{lstlisting}
+
+Operación estándar para garantizar que $\Sigma_{mix}(i,j,t) = \Sigma_{mix}(j,i,t)$. Corrige errores numéricos de punto flotante que podrían romper la simetría de la matriz de covarianza.
+
+% ============================================================
+\section{Bloque 3: Modelo de Optimización}
+% ============================================================
+
+\subsection{3.1 Escalares y Parámetros del Modelo}
+\begin{lstlisting}[language=]
+SCALARS
+   Capital_inicial  / 10000 /
+   lambda_riesgo    / 0.10  /;
+PARAMETER c_base(i);
+c_base('SPX')    = 0.005;
+c_base('CMC200') = 0.010;
+PARAMETER w0(i);
+w0('SPX')    = 0.5;
+w0('CMC200') = 0.5;
+\end{lstlisting}
+
+\begin{itemize}
+    \item \textbf{Capital\_inicial} = \$10,000 USD.
+    \item \textbf{$\lambda$} = 0.10 (Aversión al riesgo del inversor).
+    \item \textbf{$c_{SPX}$} = 0.5\% de costo por unidad de rotación en SPX.
+    \item \textbf{$c_{CMC200}$} = 1.0\% de costo por unidad de rotación (más caro por ser cripto).
+    \item \textbf{$w_0$} = Portafolio inicial equitativo 50/50.
+\end{itemize}
+
+\subsection{3.2 Variables de Decisión}
+\begin{lstlisting}[language=]
+VARIABLES
+   z           "valor objetivo"
+   w(i,t)      "peso del activo i en t"
+   u(i,t)      "parte positiva del cambio de peso"
+   v(i,t)      "parte negativa del cambio de peso";
+
+POSITIVE VARIABLES u, v;
+w.lo(i,t) = 0;  w.up(i,t) = 1;
+\end{lstlisting}
+
+\begin{itemize}
+    \item $w_{i,t} \in [0, 1]$: Fracción del capital en activo $i$ en periodo $t$.
+    \item $u_{i,t}, v_{i,t} \geq 0$: Variables auxiliares que linealizan el valor absoluto. Se cumple que $w_{i,t} - w_{i,t-1} = u_{i,t} - v_{i,t}$ y $|w_{i,t} - w_{i,t-1}| = u_{i,t} + v_{i,t}$.
+\end{itemize}
+
+\subsection{3.3 Restricciones}
+\begin{lstlisting}[language=]
+normalizacion_pesos(t)..  sum(i, w(i,t)) =e= 1;
+
+rebalanceo_lineal(i,t)$(ord(t)>1)..
+   w(i,t) - w(i,t-1) =e= u(i,t) - v(i,t);
+
+anclaje_inicial(i)..
+   w(i,'t1') - w0(i) =e= u(i,'t1') - v(i,'t1');
+\end{lstlisting}
+
+\begin{enumerate}
+    \item \textbf{Normalización:} $\sum_i w_{i,t} = 1 \quad \forall t$ (presupuesto completo).
+    \item \textbf{Rebalanceo:} Descompone el cambio de pesos en parte positiva y negativa para linealizar el valor absoluto.
+    \item \textbf{Anclaje:} El primer periodo arranca desde el portafolio inicial $w_0$.
+\end{enumerate}
+
+\subsection{3.4 Función Objetivo}
+\begin{lstlisting}[language=]
+FO_media_var_costo..
+   z =e= sum(t,
+              sum(i, w(i,t)*mu_mix(i,t))
+            - lambda_riesgo*sum((i,j), w(i,t)*w(j,t)*sigma_mix(i,j,t))
+            - sum(i, c_eff(i)*(u(i,t)+v(i,t)))
+            );
+\end{lstlisting}
+
+\textbf{Ecuación formal:}
+\begin{equation}
+    \max_{w} \; Z = \sum_{t=1}^{T} \left[ \underbrace{\sum_i w_{i,t} \mu_{mix}(i,t)}_{\text{Retorno esperado}} - \underbrace{\lambda \sum_{i,j} w_{i,t} w_{j,t} \sigma_{mix}(i,j,t)}_{\text{Riesgo}} - \underbrace{\sum_i c_i (u_{i,t} + v_{i,t})}_{\text{Costo transacción}} \right]
+\end{equation}
+
+\textbf{Observación clave:} GAMS maximiza $Z$ sobre \textbf{todos los periodos simultáneamente}. Es un problema de optimización estático que ``ve el futuro''. El solver IPOPT encuentra los $w_{i,t}^*$ óptimos de golpe.
+
+% ============================================================
+\section{Bloque 4: Evaluación Ex-Post del Capital}
+% ============================================================
+
+\begin{lstlisting}[language=]
+LOOP(t$(ord(t)>1),
+   r_port_opt(t-1) = sum(i, w.l(i,t-1)*r(i,t-1));
+   turn_opt(i,t)   = u.l(i,t) + v.l(i,t);
+   cap_opt(t)      = cap_opt(t-1)*(1 + r_port_opt(t-1))
+                     - cap_opt(t-1)*sum(i, c_base(i)*turn_opt(i,t));
+);
+\end{lstlisting}
+
+Este bloque simula cómo habría evolucionado el capital real si se hubieran ejecutado los pesos óptimos $w^*$:
+\begin{equation}
+    x_{t+1} = x_t \cdot (1 + w_t^{*\top} R_t) - x_t \cdot \sum_i c_i \cdot |w_{i,t+1}^* - w_{i,t}^*|
+\end{equation}
+
+Además calcula dos benchmarks naïve: un portafolio 50/50 con rebalanceo y otro buy\&hold sin rebalanceo.
+
+% ============================================================
+\section{Bloque 5: Análisis de Sensibilidad}
+% ============================================================
+
+\begin{lstlisting}[language=]
+SET L / L1*L5 /, C / C1*C3 /;
+lambda_grid('L1')=0.05; ... lambda_grid('L5')=1.00;
+c_mult('C1')=0.5; c_mult('C2')=1.0; c_mult('C3')=2.0;
+
+LOOP(L, LOOP(C,
+    lambda_riesgo = lambda_grid(L);
+    c_eff(i) = c_base(i)*c_mult(C);
+    SOLVE PortafolioEstadosCostos USING nlp MAXIMIZING z;
+    ... (recalcular capital) ...
+));
+\end{lstlisting}
+
+Ejecuta una grilla de $5 \times 3 = 15$ escenarios variando $\lambda \in \{0.05, 0.10, 0.20, 0.50, 1.00\}$ y un multiplicador de costos $\in \{0.5\times, 1.0\times, 2.0\times\}$, guardando el $Z$, capital final y retorno acumulado.
+
+% ============================================================
+\section{Resumen: Mapa de Parámetros para DRL}
+% ============================================================
+
+\begin{table}[h!]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{|l|c|l|}
+\hline
+\textbf{Parámetro} & \textbf{Compartir con DRL?} & \textbf{Nota} \\
+\hline
+$P_i(k,t)$ (prob HMM) & Sí & Input exógeno idéntico \\
+$R_{i,t}$ (retornos) & Sí & Ground Truth del mercado \\
+$\hat{\mu}_{i,k}$ (media régimen) & \textbf{Reformular} & Debe ser rolling $\hat{\mu}^{(t)}$ \\
+$\hat{\sigma}_{i,j,k}$ (cov régimen) & \textbf{Reformular} & Debe ser rolling $\hat{\sigma}^{(t)}$ \\
+$\mu_{mix}(i,t)$ & \textbf{Reformular} & Depende de $\hat{\mu}$ rolling \\
+$\sigma_{mix}(i,j,t)$ & \textbf{Reformular} & Depende de $\hat{\sigma}$ rolling \\
+$c_i$, $\lambda$, $w_0$, $x_0$ & Sí & Escalares compartidos \\
+$w^*_{i,t}$ (pesos óptimos) & \textbf{No} & Resultado exclusivo de GAMS \\
+$Z^*$ (valor objetivo) & \textbf{No} & Resultado exclusivo de GAMS \\
+\hline
+\end{tabular}
+\caption{Clasificación de parámetros para la transferencia GAMS $\rightarrow$ DRL.}
+\end{table}
+
+\vspace{5mm}
+\colorbox{yellow!30}{\parbox{0.95\textwidth}{
+\textbf{Tarea Post-Reunión:} El Data Handler de Python deberá implementar una versión \textbf{expanding-window} de las ecuaciones del Bloque 2, donde para cada periodo $t$, los momentos $\hat{\mu}^{(t)}_{i,k}$ y $\hat{\sigma}^{(t)}_{i,j,k}$ se calculan usando únicamente los datos $\{1, \ldots, t\}$. Esto elimina el data leakage y genera un ``$\mu$ gorro'' honesto para cada paso temporal del agente DRL.
+}}
+
+\end{document}

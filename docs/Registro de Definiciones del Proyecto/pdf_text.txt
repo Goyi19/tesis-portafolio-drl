@@ -1,0 +1,54 @@
+max
+w,u,v
+TX
+t=1
+
+X
+i∈I
+wi,tµi,t −λ
+
+
+
+X
+i∈I
+X
+j∈I
+wi,twj,tΣi,j,t −V
+
+
+ −
+X
+i∈I
+ceff
+i (ui,t +v i,t)
+
+ .
+(1)
+Entendiendo el multiplicador de Lagrange.
+Esta es la restricci´ on que se quiere representar.
+X
+i∈I
+X
+j∈I
+wi,twj,tΣi,j,t ≤V(2)
+Que significa que el inversor “no soporta” m´ as riesgo total queVpara su
+portafolio. Implica:
+X
+i∈I
+X
+j∈I
+wi,twj,tΣi,j,t −V≤0 (3)
+Tendr´ a un multiplicador de Lagrangeλ≥0 tal que con el t´ ermino.
+λ
+
+
+
+X
+i∈I
+X
+j∈I
+wi,twj,tΣi,j,t −V
+
+
+ (4)
+1

@@ -1,0 +1,49 @@
+PT1: Hito 1
+Integrantes:
+Rodrigo Valenzuela T
+Profesor:
+Juan Pérez
+3 de octubre de 2025
+1.Resumen
+En esta entrega se cumple el objetivo de entender los modelos matemáticos y conceptos que envuelven al tema a desarrollar de “optimización de construcción de portafolios de inversión con Deep Reinforcement Learning”, partiendo por transcribir lo entendido y estudiado de los principios más básicos del modelo de Markowitz para luego ir avanzando hacia los demás modelos como serian los de Sharpe y Sortino, y por último por transcribir lo entendido de Deep Reinforcement Learning (DRL)
+2. Capítulo 1: Modelos matemáticos
+2.1 Definiciones Matemáticas:
+2.1.1 Retorno esperado:
+2.1.2 Varianza y covarianza de retornos:
+2.1.3 Proporción invertida en cada activo:
+2.1.4 Retorno esperado del portafolio:
+2.1.5 Varianza del portafolio o riesgo del portafolio:
+2.1.5 Riesgo total del portafolio o desviación estandar total de los retornos:
+2.1.5 Riesgo negativo de portafolio o desviación estándar de los retornos negativos:
+2.1.6 Entropía de Shannon:
+2.1.7 Participación del modelo Naive o Ingenuo:
+2.1.8 Retorno esperado de portafolio Naive:
+2.1.9 Varianza del portafolio o riesgo del portafolio Naive:
+2.1.10 Ratio de Sharpe:
+2.1.11 Ratio de Sortino:
+2.1.12 Modelo de decisión de Markov (MDP):
+2.1.12.1 Función objetivo de Markov:
+2.1.13 Ecuación de Bellman:
+2.1.14 Log-retorno del portafolio como recompensa de MDP:
+2.2 Modelo de Markowitz
+Planteado en 1952 para la selección de portafolios de inversión, también llamado Mean variance model o Modern Portfolio Theory. Este modelo se basa en supuestos básicos del tipo de inversionista, el cual es racional y averso al riesgo, es decir entre dos opciones con igual retorno esperado eligen el de menor riesgo, las decisiones se toman en un horizonte de tiempo, no se consideran los costos de transacción ni impuestos, todos tienen información disponible y homogénea disponible, los retornos de los activos se miden según su media o retorno esperado y el riesgo se mide en cuanto a la varianza de este activo.
+Es un modelo básico en el sentido en que es la base de la mayoría de los modelos de optimización porque plantea la optimización de las variables más clave que son el retorno de la inversión que es el foco principal de todo inversor, y esto variando según la minimización del riesgo reflejado en la varianza del activo. El modelo decide las proporciones que componen el portafolio de inversión no necesariamente incitando a la diversificación en el modelo pero tomándola en cuenta dentro del universo de activos que están disponibles para ser invertidos. El modelo de Markowitz por sí solo genera soluciones llamadas “corner solutions” que proponen una composición de portafolio muy concentrada en pocos activos, esta característica da un espacio a complementar el modelo de Markowitz y usarlo como la base de otros modelos más complejos.
+2.2.1 Problema de optimización:
+2.3 Modelo de entropía de Shannon:
+El modelo de Shannon introduce el término de entropía de Shannon el cual mide el grado de dispersión de la distribución del portafolio de forma que un valor alto de H corresponde a un grado de diversificación alto y un valor bajo de H a un grado de diversificación bajo o concentración alta. El modelo plantea la maximización de la diversificación directamente en su función objetivo a diferencia del modelo de Markowitz, fijando un límite de riesgo soportado y un retorno objetivo. Este modelo plantea una potencial solución al problema de “corner solutions” del modelo de Markowitz.
+2.3.1 Problema de optimización:
+2.2  Shannon’s Entropy Maximization and Minimum Variance:
+Este modelo es simplemente la unión entre el modelo de Markowitz y el modelo de entropía de Shannon, este último funciona como un complemento y solucionador de problemas de las “corner solutions” de forma que minimiza el riesgo del portafolio y al mismo tiempo minimiza la entropía negativa de Shannon que corresponde a maximizar la diversificación del portafolio, esto nos da un modelo que abarca más y de mejor forma estos dos componentes, todo esto dado un retorno de portafolio deseado.
+2.3.1 Problema de optimización:
+2.3 Modelo Naive o Ingenuo:
+El Modelo de ponderación equitativa o de igual peso es un modelo que se basa en la igualdad de participación de inversión en cada activo del portafolio. Es un modelo básico y simple ya que dentro del problema de optimización no considera los retornos de cada activo ni el riesgo de estos. Se considera, en algunos casos, un punto de referencia base para otros modelos. Este modelo al tener ponderaciones iguales entre los activos maximiza la diversificación y por lo tanto la entropía de Shannon. La palabra “Ingenuo” del modelo deriva del hecho de que el modelo no utiliza información de los activos y se resigna a la idea de poder obtener más información, también cumple con la idea de “no poner todos los huevos en la misma canasta” .
+2.4 Modelo de ratio de Sharpe:
+El modelo de Sharpe se basa en la maximización del ratio de Sharpe el cual representa la ganancia de retorno esperado del portafolio por unidad de riesgo al participar en activos con riesgo o dicho de otra forma al participar en el mercado. Este término combina riesgo y retorno en un solo término, el numerador del ratio también es llamado prima de riesgo el cual es el beneficio de retorno por inversión en activos con riesgo. Este modelo de optimización varía las participaciones de inversión en distintos activos por medio de  de forma que aumenta el ratio de Sharpe del portafolio buscando uno que si bien puede tener un retorno muy mayor por sobre el activo libre de riesgo, este retorno tiene que ser prudente a un nivel de riesgo . Este riesgo penaliza o disminuye el ratio de Sharpe por variación de los retornos positivos y negativos lo que crea un problema a la posible penalización de variación de retornos positivos inesperados que podrían generar mejores retornos del portafolio pero ya que este valor no discrimina entre estos dos tipos de variación se crea este problema.
+2.4.1 Problema de optimización:
+2.5 Modelo de ratio de Sortino:
+El modelo de Sortino viene a solucionar el problema del ratio de Sharpe al maximizar un ratio que es penalizado o disminuido por el riesgo negativo o la desviación de los retornos esperados negativos, es decir que se busca un portafolio que pueda generar retornos inesperados positivos lo cual nos beneficia, este ratio de Sortino si discrimina entre retornos esperados negativos y positivos a diferencia del ratio de Sharpe.
+2.4.1 Problema de optimización:
+2.6 Reinforcement Learning
+El reinforcement learning es un área del aprendizaje automático es decir Machine Learning y Deep learning. Es una forma de reforzar un aprendizaje mediante por ejemplo un proceso de decisión de Markov(𝓜), que incluye el entorno que corresponde a toda la información existente en el que vive el agente (), incluyendo todo tipo de información que moldee la realidad del agente. Un agente es un decisor o ente que aprende una estrategia o política () que se encuentra en un estado () que contiene las condiciones e información necesarias para tomar acciones en el entorno, esta acción es una decisión tomada por el agente que en base a la información que brinda el estado, derivando en un resultado lo que a su vez implica una recompensa () que se constituye en base a la recompensa inmediata y la recompensa futura esperada descontada por un factor de descuento ().
+El objetivo del proceso de decisión de Markov es maximizar la recompensa acumulada esperada a lo largo del tiempo (, esta se calcula en base al factor de descuento y la recompensa obtenida en el estado correspondiente dada la acción que se tomó en ese estado. La forma de calcular esta ganancia o recompensa acumulada esperada es por medio de la ecuación de Bellman que define el valor de un estado, dada una estrategia específica, como la esperanza o valor esperado de la recompensa inmediata más el valor del próximo estado o recompensas futuras descontadas . Esto hace posible el aprendizaje dinámico que es la base de Value iteration y Q-learning, también permite el aprendizaje del agente en cada paso o estado que avanza.
+Dado el contexto de activos financieros bursátiles se puede plantear el siguiente contexto: Bajo el modelo de decisión de Markov se define el entorno como el mercado donde se transan estas acciones, en el cual el agente circula, en este caso podría ser un algoritmo de deep learning que parte en un estado inicial  que describe todas las características de la acción en ese instante como podrían ser el precio actual de la acción, retorno pasado, volatilidad, correlación con otros activos y toda la información necesaria para poder tomar una acción. Dentro de las acciones posibles para tomar podría ser comprar un activo, vender un activo, mantener la posición, cambiar las participaciones del portafolio , esta acción será guiada por una política de decisión  que en base al entorno o el mercado determine si están en un estado bull o bear de forma que si corresponde al primero haya más probabilidades de compra y si están en el segundo haya más probabilidad de venta o también podría basarse en otros indicadores como el indicador greedy y fear. Por último reforzando al modelo en base a una recompensa de tipo log-retorno del portafolio, ratio de sharpe o ratio de sortino.

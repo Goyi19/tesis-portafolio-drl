@@ -1,0 +1,207 @@
+--- TEXT FROM docs\Registro de Definiciones del Proyecto\Rubricas de evaluacion Estructura y escritura\Estructura Capitulos Memoria.docx ---
+1. Estructura de Capítulos Propuesta
+
+Cap. 1: Introducción
+
+1.1 Contexto y Motivación: Describir la complejidad de los mercados financieros actuales y la necesidad de herramientas de optimización automatizadas.
+
+1.2 Definición del Problema: Explicar las limitaciones de los modelos deterministas tradicionales (como GAMS en esquemas de horizonte rodante) frente a la adaptabilidad necesaria en mercados con regímenes cambiantes.
+
+1.3 Objetivos:
+
+General: Desarrollar y comparar políticas de asignación de portafolio mediante PPO y SAC que maximicen el retorno ajustado por riesgo y costos de transacción.
+
+Específicos: Formular el problema como un MDP/POMDP, implementar el entorno de entrenamiento y evaluar el desempeño frente a benchmarks como GAMS y Buy-and-Hold.
+
+Cap. 2: Marco Teórico
+
+2.1 Teoría de Portafolio Clásica: Incluir los modelos de Markowitz, Sharpe y Sortino que desarrollaste en el Hito 1.
+
+2.2 Deep Reinforcement Learning (DRL): Explicar los fundamentos de RL, el Proceso de Decisión de Markov (MDP) y la Ecuación de Bellman.
+
+2.3 Algoritmos PPO y SAC: Detallar el funcionamiento de Proximal Policy Optimization y Soft Actor-Critic, incluyendo sus funciones de pérdida y arquitecturas Actor-Crítico.
+
+2.4 Regímenes de Mercado: Definición de estados Bear y Bull y el uso de Modelos Ocultos de Markov (HMM) para señales de régimen.
+
+Cap. 3: Metodología y Formulación del Modelo
+
+3.1 Formulación del MDP/POMDP: Definir formalmente el espacio de estados ($S$), acciones ($A$), dinámica de transición ($P$) y la función de recompensa ($R$) que replica la lógica de GAMS (retorno menos riesgo y costos).
+
+3.2 Datos y Preprocesamiento: Detallar el uso de activos SPX y CMC200, el horizonte de 163 semanas y la partición del dataset en Train (70%), Val (15%) y Test (15%).
+
+3.3 Diseño del Entorno (Gym): Explicar la implementación del entorno de portafolio, la normalización Z-Score y la proyección al simplex de los pesos del portafolio.
+
+3.4 Arquitectura de las Redes: Describir el uso de capas recurrentes (LSTM/RNN) para manejar la observabilidad parcial de los regímenes.
+
+Cap. 4: Implementación y Resultados
+
+4.1 Configuración del Entrenamiento: Detallar los hiperparámetros iniciales para PPO y SAC.
+
+4.2 Análisis de Resultados: Comparación de curvas de aprendizaje y métricas finales (Retorno Acumulado, Sharpe Ratio, Volatilidad, Max Drawdown).
+
+4.3 Comparación con Benchmarks: Presentar el desempeño de los agentes DRL frente a la solución determinista de GAMS en rolling horizon y portafolios buy-and-hold.
+
+Cap. 5: Análisis de Sensibilidad
+
+5.1 Sensibilidad General: Impacto de cambios en la aversión al riesgo ($\lambda$) y costos de transacción ($c_i$).
+
+5.2 Sensibilidad de Hiperparámetros: Presentar los resultados específicos de los dos hiperparámetros que analizaste (por ejemplo, tasa de aprendizaje o factor de descuento).
+
+5.3 Robustez del Modelo: Evaluación con múltiples semillas y estabilidad en el periodo de test.
+
+Cap. 6: Conclusiones y Recomendaciones
+
+Resumen de hallazgos sobre la efectividad de SAC/PPO frente a GAMS y recomendaciones para futuras investigaciones o aplicaciones en la industria financiera.
+
+
+
+2. Recomendaciones para el Máximo Puntaje (Rúbrica)
+
+Para alcanzar el nivel Óptimo:
+
+Estructura y Cohesión: Utiliza marcadores discursivos (ej. "En primer lugar", "No obstante", "Por consiguiente") para conectar párrafos. Mantén oraciones simples y evita párrafos de más de una idea principal.
+
+Voz Impersonal: Escribe siempre en tercera persona (ej. "Se implementó el algoritmo" en lugar de "Implementé").
+
+Integración de Elementos Visuales: No solo insertes los diagramas de flujo de PPO y SAC; debes explicarlos narrativamente en el texto (ej. "Como se observa en la Ilustración X, el flujo de datos comienza...").
+
+Formato Estricto:
+
+Letra: Times New Roman 12.
+
+Interlineado: 1.5.
+
+Márgenes: 2.5 cm superior/inferior, 3 cm lateral.
+
+Referencias: Usa estilo Harvard estrictamente para todas las citas.
+--- TEXT FROM docs\Registro de Definiciones del Proyecto\Rubricas de evaluacion Estructura y escritura\Rúbrica Escritura Español.pdf ---
+ 
+PAUTA DE CORRECCIÓN DE LA COMUNICACIÓN  ESCRITA, GÉNERO: INFORME.   
+Curso: ………………………………………………………  
+ 
+ 
+ 
+  
+Importancia Criterio Óptimo                 Aceptable                    Insuficiente 
+Alta 
+Estructura Científica El informe presenta todas las secciones: resumen, índice 
+introducción, objetivo general y específicos, metodología, 
+resultados, conclusión y bibliografía . Cada una de estas 
+secciones presenta toda la información que le es perti-
+nente. 
+El informe incluye la mayoría de las secciones cien-
+tíficas, aunque algunas están poco desarrolladas o 
+presentan información correspondiente a otras. 
+Faltan varias secciones fundamentales o la or-
+ganización del informe no sigue una estructura 
+científica clara. 
+Alta 
+Coherencia Las ideas se desarrollan de forma lógica y consistente. 
+Cada párrafo presenta un orden lógico como causa – 
+efecto, de lo general a lo particular, orden cronológico, etc. 
+Además, los párrafos están compuestos por máximo 1 idea 
+principal y algunas ideas secundarias. 
+En algunos párrafos, el orden lógico de las ideas es 
+poco claro o bien, estos presentan más de una idea 
+principal o las ideas secundarias no se relacionan di-
+rectamente con dicha idea. 
+El informe presenta las ideas de forma desor-
+ganizada y/o contradictoria. En general, los 
+párrafos presentan más de una idea principal y 
+las ideas secundarias del mismo no están rela-
+cionadas con dicha idea. 
+Alta 
+Cohesión Se utilizan adecuadamente mecanismos de correferencia, 
+conectores y marcadores discursivos .  El uso de coma y 
+punto seguido favorece oraciones simples. En general, el 
+texto se entiende rápidamente. 
+Presenta un uso limitado mecanismos de correferen-
+cia, conectores y marcadores discursivos. En gene-
+ral, hay secciones del texto que se entienden rápida-
+mente y otras no. 
+Presenta un uso ocasional de mecanismos de 
+correferencia, conectores y marcadores dis-
+cursivos. En general, la lectura del texto se 
+hace lenta y compleja. 
+Alta 
+Exposición de Resultados Los resultados obtenidos se explican claramente y su in-
+terpretación se relaciona con los objetivos y la metodolo-
+gía del estudio. Asimismo, su presentación se comple-
+menta con tablas, figuras o imágenes, las cuales se integran 
+narrativamente al informe. 
+Las explicaciones de los resultados son parciales o 
+su relación con los objetivos y la metodología es in-
+directa. Se presentan pocos textos discontinuos com-
+plementarios tales como tablas, figuras o imágenes 
+o bien estos no se integran al informe. 
+Las explicaciones de los resultados están in-
+completas en relación con  los objetivos y la 
+metodología o bien, son confusas. Se utilizan 
+escasos textos discontinuos como comple-
+mento y/o estos no se integran al informe. 
+Alta 
+Referencias Los contenidos utilizados son atribuidos a su fuente origi-
+nal. Dichas fuentes son confiables y pertinentes para sus-
+tentar conceptos, teorías y/o ejemplos. Las citas y referen-
+cias se exponen correctamente según estilo Harvard. 
+Hay varios contenidos a los cuales no se atribuyen 
+las fuentes. Algunas fuentes son académicas, pero 
+otras son poco confiables. El uso del estilo Harvard 
+es parcial o presenta algunos errores. 
+A la mayoría de los contenidos no se le atribu-
+yen fuentes o bien, las fuentes utilizadas son, 
+en general, poco académicas y confiables. No 
+se utiliza el estilo Harvard o bien su uso pre-
+senta múltiples errores. 
+Media 
+Adecuación y Gramática  El texto mantiene un registro académico formal , emplea 
+vocabulario preciso y utiliza la voz impersonal o tercera 
+persona singular , característica de la escritura científica. 
+Además, todas las oraciones presentan núcleo verbal. 
+El registro es mayormente formal, aunque aparecen 
+expresiones poco académicas, imprecisas y/o infor-
+males. Asimismo, presenta algunas oraciones sin nú-
+cleo verbal. 
+El registro es mayoritariamente informal e 
+inapropiado para un texto académico. Asi-
+mismo, presenta múltiples oraciones sin nú-
+cleo verbal. 
+Media 
+Formato y Ortografía La portada presenta toda la información correspondiente e 
+incluye contraportada. Las fuentes tipográficas y el inter-
+lineado son homogéneos y los márgenes son adecuados. 
+En general, la presentación facilita la lectura.  Por otra 
+parte, no presenta errores de ortografía literal ni acentual. 
+Faltan algunos datos en la portada o bien algunos 
+componentes del formato son inadecuados o poco 
+homogéneos. Asimismo, presenta algunos errores de 
+ortografía literal y acentual. 
+El informe carece de ciertos datos en la por-
+tada y/o la mayoría de los componentes del 
+formato son inadecuados o poco homogéneos. 
+Asimismo, presenta múltiples errores de orto-
+grafía literal y acentual. 
+Alumnos/Grupo:………………………………….……………………………………………………… 
+ 
+                                                Corrector(a): ………………………………………………………….. 
+ 
+Para aprobar, se deben cumplir las condiciones de aprobación por nivel. Estas incluyen una cantidad mínima de óptimos, aceptables e insuficientes y una condición en los criterios de 
+alta relevancia, según las especificaciones de la siguiente tabla.  
+ 
+ 
+  
+Nivel 
+  
+Exigencia 
+ 
+Criterios exigibles para aprobación 
+ Cantidad de “Óptimo” Cantidad de “Insuficiente” Condiciones adicionales 
+A Básica No Aplica Máx 2   
+B Intermedia No Aplica Máx 2  Dentro de los ítems que pueden estar calificados 
+como insuficiente, solo pueden ser aquellos con 
+importancia media. 
+C Alta Min 5  0 
+ 
+ 
+ 
+

@@ -1,0 +1,93 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{tcolorbox}
+
+\geometry{margin=2.5cm}
+
+\title{\textbf{01. Preparación de Datos y Estimación de Parámetros (Etapa 1)}}
+\author{Registro de Definiciones del Proyecto - Tesis DRL Portafolios}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+Este documento detalla la ejecución técnica de la \textbf{Etapa 1} definida en la Memoria de Referencia (Documento 02), adaptándola a los activos SPX y CMC200 para un horizonte de $T=163$ semanas.
+
+\section{Datos Fuente y Horizonte Temporal}
+
+El proyecto utiliza series históricas semanales para $T=163$ periodos. Los insumos base son:
+\begin{itemize}
+    \item \textbf{Retornos Netos ($R_{i,t}$):} Observaciones semanales de SPX y CMC200.
+    \item \textbf{Probabilidades HMM ($P_{i,k,t}$):} Señales exógenas de régimen (Bear/Bull).
+\end{itemize}
+
+\section{Partición del Dataset (Rigor DRL)}
+
+Siguiendo la metodología \textit{walk-forward} de la Biblia, dividimos las 163 semanas para garantizar la capacidad de generalización:
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Conjunto} & \textbf{Rango (semanas)} & \textbf{Propósito} \\ \midrule
+Entrenamiento (Train) & 1 - 114 (70\%) & Aprendizaje de la política. \\
+Validación (Val) & 115 - 138 (15\%) & Ajuste de hiperparámetros. \\
+Prueba (Test) & 139 - 163 (15\%) & Evaluación out-of-sample vs GAMS. \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\section{Estimación de Parámetros Mix}
+
+Para cada periodo $t$, se calculan las expectativas de mercado mediante una ventana expansiva ($1 \dots t$).
+
+\subsection{Estimación de Momentos por Régimen}
+Para cada activo $i$ bajo el régimen $k$, los momentos se estiman ponderando cada observación histórica por su probabilidad de pertenencia al régimen:
+
+\begin{equation}
+    \hat{\mu}_{i,k,t} = \frac{\sum_{m=1}^t P_{i,k,m} R_{i,m}}{\sum_{m=1}^t P_{i,k,m}}
+\end{equation}
+
+\begin{equation}
+    \hat{\sigma}_{i,j,k,t} = \frac{\sum_{m=1}^t P_{i,k,m} (R_{i,m} - \hat{\mu}_{i,k,t})(R_{j,m} - \hat{\mu}_{j,k,t})}{\sum_{m=1}^t P_{i,k,m}}
+\end{equation}
+
+\subsection{Construcción de Variables Mix}
+Integramos la incertidumbre del régimen en una única señal de media y riesgo:
+\begin{equation}
+    \mu_{mix, i,t} = \sum_{k} P_{i,k,t} \cdot \hat{\mu}_{i,k,t}
+\end{equation}
+\begin{equation}
+    \sigma_{mix, i,j,t} = \sum_{k} P_{i,k,t} \cdot \hat{\sigma}_{i,j,k,t}
+\end{equation}
+
+Estas variables simplifican la tarea del agente al entregarle la información ya integrada.
+
+\section{Normalización Z-Score de Observaciones}
+
+Aplicamos estandarización expansiva para asegurar estabilidad numérica. Para cada variable $x_{mix, t}$, calculamos su versión normalizada:
+\begin{equation}
+    z(x)_{mix, t} = \frac{x_{mix, t} - \mu(x)_{mix, t}}{\sigma(x)_{mix, t}}
+\end{equation}
+
+\section{Parámetros del Modelo y Configuración Base}
+
+Para asegurar la comparabilidad con el modelo GAMS original, se registran las siguientes constantes:
+
+\begin{itemize}
+    \item \textbf{Capital Inicial ($x_0$):} 10,000 USD.
+    \item \textbf{Pesos Iniciales ($w_0$):} 50\% SPX / 50\% CMC200.
+    \item \textbf{Costos de Transacción ($c_i$):} SPX ($0.5\%$), CMC200 ($1.0\%$).
+    \item \textbf{Aversión al Riesgo ($\lambda$):}
+    \begin{itemize}
+        \item Grilla GAMS: $\{0.05, 0.10, 0.25, 0.50, 1.00\}$.
+        \item \textbf{Selección DRL:} $\lambda = 0.10$.
+    \end{itemize}
+\end{itemize}
+
+\end{document}

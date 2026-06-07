@@ -1,0 +1,230 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{color}
+\usepackage{tikz}
+\usetikzlibrary{babel}
+\usepackage{booktabs}
+
+\title{\textbf{Clase 3: Diseño de Arquitecturas de Red Neuronal para PPO y SAC}}
+\author{Fase Práctica DRL - Tesis Portafolio}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Introducción al Diseño de Arquitecturas}
+En esta tercera fase de estudio, dejaremos de lado las ecuaciones del Entorno (MDP) para enfocarnos exclusivamente en la \textbf{Ingeniería de Cerebros Artificiales}. Responderemos a la pregunta: \textit{¿Cómo estructuramos las cajas negras neuronales para que operen nuestro dinero de forma rentable?}
+
+Todo nuestro diseño estará sometido estrictamente al documento maestro de Metodología de Implementación. Por instrucción inquebrantable de la tesis, ignoraremos por completo arquitecturas complejas y sobreparametrizadas (Redes Recurrentes LSTM o Convolucionales CNN). 
+
+\subsection*{Decisión Crítica: ¿Por qué obligatoriamente limitarnos a Perceptrones Multicapa (MLP)?}
+En un tribunal clásico de Machine Learning, podrían refutarte: \textit{"La bolsa de valores es una serie de tiempo, ¿por qué no evaluar la historia de los retornos con una memoria recurrente LSTM?"}
+
+Tu defensa es infalible porque nace de tu diseño previo del Entorno: \textbf{Tú ya tienes un modelo HMM de regímenes.}
+Las LSTM son necesarias cuando le entregas al modelo precios crudos a ciegas y esperas que sea él quien memorice y descubra los regímenes. En nuestro caso, el \textit{Estado $s_t$} que la red ingiere ya contiene probabilidades matemáticas destiladas por el HMM (bear/bull) junto con matrices condicionadas de $\mu_t$ y $\Sigma_t$. El caos temporal del mercado ya fue comprimido de forma perfecta en un \textbf{Proceso de Markov}.
+
+Si le pusiéramos una red con memoria LSTM a observar probabilidades ya establecidas por un modelo de Markov temporal (HMM), crearíamos una iteración conflictiva y redundante de memoria sobre memoria. Adicionalmente, el documento matriz exige: \textit{"usar 2 a 3 capas intermedias de tamaño moderado (64-128 neuronas) para evitar sobreparametrizar"}. Nuestro objetivo es lograr que el Agente asigne capital agresivamente sin hacer "Overfitting" sobre el ruido bursátil pasado. De ahí nace el reinado del \textbf{Perceptrón Multicapa Estándar (MLP)}.
+
+
+\section{Arquitectura para PPO: El Perfil Conservador}
+Proximal Policy Optimization requiere extrema estabilidad porque optimiza usando \textit{Clipping}. Para evitar que las señales de aprendizaje se estrellen, diseñaremos las dos Redes del algoritmo PPO \textbf{totalmente separadas e independientes}.
+
+Dada la menor complejidad de entrenar $V(s)$ en lugar del agresivo $Q(s,a)$, PPO lucirá una red más ligera y de cortes monótonos con funciones \textbf{Tanh (Tangente Hiperbólica)}.
+
+\subsection{Actor de PPO (La Política $\pi$)}
+La red neuronal que "adivina" los pesos óptimos $w_t$.
+\begin{itemize}
+    \item \textbf{Capa de Entrada (Input):} Vector escalar del Estado Bursátil de tamaño $|S|$.
+    \item \textbf{Capa Oculta 1:} Diferenciable Densa de \textbf{128 Neuronas} con activación \texttt{Tanh}.
+    \item \textbf{Capa Oculta 2:} Diferenciable Densa de \textbf{128 Neuronas} con activación \texttt{Tanh}.
+    \item \textbf{Capa de Salida:} Arroja un Vector continuo de \textbf{Dimensiones $|I|$} (SPX y Cripto). 
+    \item \textit{Nota de Acción:} En la implementación estricta, la red no arroja los pesos crudos directamente. Arrojará un valor $\tilde{a}_t \in [-1, 1]$ que luego el entorno \texttt{Gymnasium} transformará usando el mecanismo max(0) y lo empujará al Símplex dictado por $\frac{max(0, \tilde{a}_{i,t})}{\sum max(0, \tilde{a}_{j,t})}$. 
+    \item \textbf{Desviación Estándar ($\sigma$):} En PPO, el nivel de varianza exploratoria de esta campana de Gauss no la decide la red neuronal. Es un parámetro del sistema que se inicializa explícitamente e \textbf{independiente del estado temporal}, enfriándose hacia la explotación durante el entrenamiento.
+\end{itemize}
+
+\subsection{Crítico de PPO ($V_\theta$)}
+La red neuronal tasadora que solo se asegura de entregar una métrica escalar del valor al Actor.
+\begin{itemize}
+    \item \textbf{Capa de Entrada (Input):} Vector escalar del Estado Bursátil de tamaño $|S|$.
+    \item \textbf{Capa Oculta 1:} Diferenciable Densa de \textbf{128 Neuronas} con activación \texttt{Tanh}.
+    \item \textbf{Capa Oculta 2:} Diferenciable Densa de \textbf{128 Neuronas} con activación \texttt{Tanh}.
+    \item \textbf{Capa de Salida:} Un único nodo escalar lineal (Densa tamaño 1). Sin función de activación, pues estimará el valor económico real en sumatoria.
+\end{itemize}
+
+
+\section{Arquitectura para SAC: El Explorador Entrópico}
+Soft Actor-Critic debe domar el inmenso caos adicional que genera su \textit{Entropía Maximizada}. Mientras PPO busca rutas seguras, SAC se nutre del azar y requiere Redes \textbf{desarrolladas mediante activaciones ReLU} (sin topes superiores), sumado a la construcción monumental estipulada de Redes Gemelas.
+
+Dado que busca funciones mucho más profundas del paisaje de la matriz de covarianzas, respetando la estructura pero dando ancho al canal, escalamos sus nodos sutilmente al límite sano recomendado.
+
+\subsection{Actor de SAC (La Política $\pi$)}
+Actor con volatilidad dinámica reactiva. A diferencia de PPO, se condicionará al estado turbulento.
+\begin{itemize}
+    \item \textbf{Capa de Entrada (Input):} Vector escalar del Estado Bursátil.
+    \item \textbf{Capa Oculta 1:} Diferenciable Densa de \textbf{256 Neuronas} con activación \texttt{ReLU}.
+    \item \textbf{Capa Oculta 2:} Diferenciable Densa de \textbf{256 Neuronas} con activación \texttt{ReLU}.
+    \item \textbf{Capa Dual de Salida:} Aquí diverge brutalmente. Dado que tenemos 2 activos en juego (SPX y Cripto), esta última capa neuronal arroja \textbf{4 valores numéricos simultáneos} (salidas bifurcadas):
+    \begin{enumerate}
+        \item Densa con salida de 2 nodos para modelar la media determinista de cada activo: ($\mu_{SPX}$, $\mu_{Cripto}$).
+        \item Densa separada de 2 nodos, \textbf{totalmente calculada por la red}, para modelar sus respectivos logaritmos de volatilidad: ($\log \sigma_{SPX}$, $\log \sigma_{Cripto}$).
+    \end{enumerate}
+    \textit{Consecuencia:} Si la red, en base a su Input HMM, huele que estamos en pleno Crack Financiero Cripto, el Actor disparará por sí mismo su métrica de desviación dinámica $(\sigma_{Cripto})$ a niveles astronómicos, forzándose a jugar con fuego (exploración entrópica audaz) en es criptomoneda, sin afectar la pasividad exploratoria del activo SPX.
+\end{itemize}
+
+\subsection{Críticos Duales de SAC (Twin Q-Networks)}
+Dado que esta arquitectura no calcula $V$, sino Soft $Q(s_t, a_t)$, sufre una patología severa: "Overestimation Bias" (La IA tiene falsas esperanzas crónicas de que los activos Cripto seguirán subiendo por entropía inflada). Para solucionarlo requerimos clonar el crítico (Mecanismo TD3).
+\begin{itemize}
+    \item \textbf{Capa de Entrada (Input):} Vector del Estado $S_t$ unido de bloque al Vector de la Acción Decidida $A_t$ ($|S| + |A|$).
+    \item \textbf{Arquitectura Gemela Paralela (TD3):} Se construyen estrictamente dos redes totalmente separadas operando al unísono. Pese a poseer la \textit{misma estructura física}, ambas nacen con inicializaciones aleatorias de pesos neuronales totalmente distintas. Al procesar datos estocásticos desde orígenes distintos, obtendrán "opiniones" levemente diferentes:
+    \begin{itemize}
+        \item \textbf{Crítico 1:} Densa(256,\texttt{ReLU}) $\rightarrow$ Densa(256,\texttt{ReLU}) $\rightarrow$ Nodo Escalar para Valor $Q_1$.
+        \item \textbf{Crítico 2:} Densa(256,\texttt{ReLU}) $\rightarrow$ Densa(256,\texttt{ReLU}) $\rightarrow$ Nodo Escalar para Valor $Q_2$.
+    \end{itemize}
+    \item \textbf{La Condición de Mitigación al Sesgo:} ¿Por qué sirven 2 redes de lo mismo? En DRL, el ruido estadístico suele confundir a una Red solitaria haciéndola creer que acaba de descubrir oro ilusorio. Al tener 2 gemelos con pesos independientes, el motor SAC les obligará a debatir y, mediante Backpropagation, evaluará sus rendimientos forzando un $Q_{target} \approx \min(Q_1(s,a), Q_2(s,a))$. Al penalizarlos forzándolos a usar siempre la estimación más pesimista, la IA desactiva matemáticamente el mortífero sesgo \textit{Overestimation Bias} y evita sobre-operar inversiones infladas por la estupidez transitoria.
+\end{itemize}
+
+\section{Parámetros Fundamentales del Entrenamiento DRL}
+Para dejar la infraestructura neuronal sin cabos sueltos teóricos, es fundamental definir cómo se moverán esos inmensos bloques matemáticos durante las épocas de aprendizaje iterativo en Python:
+
+\begin{itemize}
+    \item \textbf{Las Condiciones Iniciales de los Pesos:}
+    \begin{itemize}
+        \item \textit{Pesos de las Acciones Financieras del Portafolio ($w_0$):} Cada vez que la simulación inicie un nuevo episodio en Gymnasium, tu dinero nacerá típicamente en un portafolio equilibrado inicial uniforme (ej: $50\%$ SPX y $50\%$ Cripto) antes de que la IA opere.
+        \item \textit{Pesos de las Redes Neuronales ($\theta$):} Los tensores internos que multiplican matrices en la IA no parten de base monetaria, sino que utilizan un sistema de Inicialización Ortogonal Aleatoria; es decir, nacen como números distribuidos estocásticamente en un entorno nulo para asegurar que los gradientes no exploten en los milisegundos de arranque.
+    \end{itemize}
+    
+    \item \textbf{Backpropagation y Optimizador ADAM:}
+    \begin{itemize}
+        \item La red neuronal no corrige sus errores con simple Descenso de Gradiente (SGD). Usaremos obligatoriamente \textbf{ADAM (Adaptive Moment Estimation)}. Este algoritmo matemático estandarizado calcula tasas de aprendizaje individuales adaptables para cada peso midiendo el primer y segundo momento de las varianzas. Literalmente, ADAM es capaz de reaccionar absorbiendo el ruido errático colosal que introducen las series de tiempo financieras, dándonos el entrenamiento más prístino posible en Deep Learning tabular.
+    \end{itemize}
+    
+    \item \textbf{La Fijación de la Entropía ($\alpha$) en SAC:}
+    \begin{itemize}
+        \item El parámetro de temperatura entrópica de la ecuación, $\alpha$, es el multiplicador que define cuánto bono monetario le inyectamos a SAC por jugar de manera atrevida. En tu Tesis, dejaremos que ese valor inicie dinámico marcándolo como \texttt{"auto"}. Esto desencadena una optimización de Backpropagation secundaria puramente matemática que sintoniza el multiplicador sin ayuda del humano. El SAC premiará locuras altísimas en sus primeras iteraciones y enfriará su $\alpha$ progresivamente apenas encuentre una política financiera seria y rentable, dirigiéndose numéricamente a una entropía objetivo estipulada heurísticamente en $-\dim(\mathcal{A})$ (en tu caso sería $-2$).
+    \end{itemize}
+\end{itemize}
+
+\section{Esquemas Estructurales y Tabla Resumen}
+A continuación se plasma de manera visual el mapeo estructural de los cerebros artificiales que codificaremos para el portafolio.
+
+\subsection{Esquema de Flujo para PPO}
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[node distance=1.5cm]
+\tikzstyle{box} = [rectangle, rounded corners, minimum width=2.5cm, minimum height=1cm,text centered, draw=black, fill=blue!10]
+\tikzstyle{io} = [rectangle, rounded corners, minimum width=2.0cm, minimum height=1cm,text centered, draw=black, fill=green!10]
+\tikzstyle{outbox} = [rectangle, rounded corners, minimum width=2.0cm, minimum height=1cm,text centered, draw=black, fill=red!10]
+\tikzstyle{arrow} = [thick,->,>=stealth]
+
+% PPO Actor
+\node (title1) at (4, 1.5) {\underline{\textbf{Actor PPO}}};
+\node (in1) [io] at (0, 0) {Estado $S_t$};
+\node (h1_1) [box] at (3.5, 0) {Densa 128 (Tanh)};
+\node (h1_2) [box] at (7.5, 0) {Densa 128 (Tanh)};
+\node (out1) [outbox] at (11.5, 0) {Media $\mu$};
+\node (out_std) [outbox] at (11.5, -1.2) {Desv. $\sigma$ (Global)};
+
+\draw [arrow] (in1) -- (h1_1);
+\draw [arrow] (h1_1) -- (h1_2);
+\draw [arrow] (h1_2) -- (out1);
+
+% PPO Critic
+\node (title2) at (4, -2.5) {\underline{\textbf{Crítico PPO}}};
+\node (in2) [io] at (0, -4) {Estado $S_t$};
+\node (h2_1) [box] at (3.5, -4) {Densa 128 (Tanh)};
+\node (h2_2) [box] at (7.5, -4) {Densa 128 (Tanh)};
+\node (out2) [outbox] at (11.5, -4) {Escalar $V(s_t)$};
+
+\draw [arrow] (in2) -- (h2_1);
+\draw [arrow] (h2_1) -- (h2_2);
+\draw [arrow] (h2_2) -- (out2);
+\end{tikzpicture}
+\caption{Diseño Arquitectónico de las Redes Separadas para Proximal Policy Optimization.}
+\end{figure}
+
+\subsection{Esquema de Flujo para SAC}
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[node distance=1.5cm]
+\tikzstyle{box} = [rectangle, rounded corners, minimum width=2.5cm, minimum height=1cm,text centered, draw=black, fill=blue!10]
+\tikzstyle{io} = [rectangle, rounded corners, minimum width=2.0cm, minimum height=1cm,text centered, draw=black, fill=green!10]
+\tikzstyle{outbox} = [rectangle, rounded corners, minimum width=2.0cm, minimum height=1cm,text centered, draw=black, fill=red!10]
+\tikzstyle{arrow} = [thick,->,>=stealth]
+
+% SAC Actor
+\node (title1) at (4, 1.5) {\underline{\textbf{Actor SAC}}};
+\node (in1) [io] at (0, 0) {Estado $S_t$};
+\node (h1_1) [box] at (3.5, 0) {Densa 256 (ReLU)};
+\node (h1_2) [box] at (7.5, 0) {Densa 256 (ReLU)};
+\node (out1_mu) [outbox] at (11.3, 0.7) {Medias $\mu(s_t)$};
+\node (out1_std) [outbox] at (11.3, -0.7) {Log $\sigma(s_t)$};
+
+\draw [arrow] (in1) -- (h1_1);
+\draw [arrow] (h1_1) -- (h1_2);
+\draw [arrow] (h1_2) |- (out1_mu);
+\draw [arrow] (h1_2) |- (out1_std);
+
+% SAC Critic
+\node (title2) at (4, -2.2) {\underline{\textbf{Críticos Gemelos SAC (Mecanismo TD3)}}};
+\node (in2) [io] at (0, -4.5) {$S_t$ + Acción $A_t$};
+
+\node (h21_1) [box] at (3.5, -3.5) {Densa 256 (ReLU)};
+\node (h21_2) [box] at (7.5, -3.5) {Densa 256 (ReLU)};
+\node (out2_1) [outbox] at (11.3, -3.5) {Valor $Q_1(s_t, a_t)$};
+
+\node (h22_1) [box] at (3.5, -5.5) {Densa 256 (ReLU)};
+\node (h22_2) [box] at (7.5, -5.5) {Densa 256 (ReLU)};
+\node (out2_2) [outbox] at (11.3, -5.5) {Valor $Q_2(s_t, a_t)$};
+
+\draw [arrow] (in2) |- (h21_1);
+\draw [arrow] (h21_1) -- (h21_2);
+\draw [arrow] (h21_2) -- (out2_1);
+
+\draw [arrow] (in2) |- (h22_1);
+\draw [arrow] (h22_1) -- (h22_2);
+\draw [arrow] (h22_2) -- (out2_2);
+
+\end{tikzpicture}
+\caption{Diseño Arquitectónico de las Redes Entrópicas Soft Actor-Critic.}
+\end{figure}
+
+\subsection{Tabla de Comparativa Final}
+Esta tabla sirve como herramienta referencial veloz para la implementación en Python.
+
+\begin{table}[h!]
+    \centering
+    \renewcommand{\arraystretch}{1.3} % expand table visually
+    \begin{tabular}{|l|c|c|}
+    \hline
+    \textbf{Propiedad Neural} & \textbf{PPO (Algoritmo Conservador)} & \textbf{SAC (Algoritmo Entrópico)} \\
+    \hline
+    \textbf{Tallas de Red (Actor)} & MLP $128 \times 128$ & MLP $256 \times 256$ \\
+    \hline
+    \textbf{Función Activación} & \texttt{Tanh} (Monótona, fluida y acotada) & \texttt{ReLU} (Profunda y libre) \\
+    \hline
+    \textbf{Nodos de Salida del Actor} & 2 Nodos: (Media $\mu_{SPX}$, $\mu_{Cripto}$) & 4 Nodos: ($\mu$ y $\log\sigma$ dinámicos) \\
+    \hline
+    \textbf{Tallas de Red (Crítico)} & Red Singular $128 \times 128$ & Q-Networks Gemelos $256 \times 256$ \\
+    \hline
+    \textbf{Input Observado (Crítico)} & Sólo el Estado actual ($S_t$) & El Estado ($S_t$) + La Acción ($A_t$) \\
+    \hline
+    \textbf{Salida Final (Crítico)} & Valor Generalizado $V(s_t)$ & Mínimo protector: $\min(Q_1, Q_2)$ \\
+    \hline
+    \textbf{Optimizador Gradiente} & ADAM & ADAM \\
+    \hline
+    \textbf{Inicialización Interna} & Matriz Ortogonal Estocástica & Matriz Ortogonal Estocástica \\
+    \hline
+    \end{tabular}
+    \caption{Síntesis de parámetros de Arquitectura de Red y Entrenamiento para el Entorno Financiero.}
+\end{table}
+
+\vspace{5mm}
+\noindent Con esto, finalizamos el ensamblaje estricto de las infraestructuras de nuestros modelos de Deep Learning, cumpliendo con la filosofía de robustez impuesta en el documento maestro DRL Portfolio. La próxima fase abarca desplegar estos arquitectos en los flujos de Python estructurando los ciclos cronológicos en Gymnasium a base de diagramas y pseudocódigos.
+
+\end{document}

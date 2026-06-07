@@ -1,0 +1,176 @@
+Hito 2 (versión DRL): Formulación y Flujo de Trabajo para
+Portafolios con Regímenes Bear–Bull
+Sofía Valenzuela
+13 de marzo de 2026
+1.
+Objetivo
+El objetivo es aprender una política de asignación de portafolio πθ(at | st) que, en cada
+periodo t, determine las proporciones wt a invertir en cada activo, maximizando el retorno
+esperado del portafolio ajustado por riesgo y costos de transacción, en presencia de
+regímenes de mercado (bear/bull) parcialmente observables. A diferencia del esquema
+Smart-Predict-then-Optimize (SPO), aquí el agente interactúa con el entorno, observa st, ejecuta
+una acción at ≡wt, recibe una recompensa Rt y actualiza su política mediante Deep Reinfor-
+cement Learning (PPO o SAC) con arquitecturas recurrentes (LSTM/RNN) para manejar la
+parcial observabilidad.
+2.
+Conjuntos e Índices
+Sea i ∈I el conjunto de activos y t ∈T = {1, . . . , Tm´ax} el horizonte temporal (por ejemplo,
+semanal).
+3.
+Datos y Parámetros
+Retornos por activo ri,t; probabilidades (o señales) de régimen pi,bull,t y pi,bear,t; aversión al
+riesgo λ > 0; costos de transacción ci ≥0; pesos iniciales wi,0; y, opcionalmente, momentos
+“mixtos” µmix
+i,t
+y Σmix
+t
+si se desean usar como features del estado.
+4.
+Formulación como POMDP
+Modelamos el problema como un Proceso de Decisión de Markov Parcialmente Observable
+(POMDP)
+M = ⟨S, A, P, R, γ⟩,
+donde S es el espacio de observaciones, A el espacio de acciones, P la dinámica de transición, R
+la función de recompensa y γ ∈(0, 1] el factor de descuento.
+1
+
+Estado (observación).
+Definimos el vector de observación como
+st =
+h
+features de ri,t−L:t−1, pi,bull,t, pi,bear,t, µmix
+t
+, Σmix
+t
+, wt−1, indicadores macro
+i
+.
+(1)
+Acción (pesos).
+La acción es el vector de pesos at ≡wt = [w1,t, . . . , wn,t] con restricciones
+X
+i∈I
+wi,t = 1,
+wi,t ≥0.
+(2)
+En práctica, el actor produce logits ζt y se proyecta al simplex mediante softmax:
+wi,t =
+exp(ζi,t)
+P
+j∈I exp(ζj,t).
+(3)
+Transición.
+La transición P(st+1 | st, at) está inducida por la dinámica del mercado (retornos
+y probabilidades de régimen bear–bull) y el efecto del rebalanceo de portafolio.
+Recompensa.
+Replicamos la estructura del modelo GAMS (retorno menos riesgo y fricción),
+con opción de bono de diversificación:
+Rt =
+X
+i
+wi,t ri,t+1
+|
+{z
+}
+retorno
+−λ w⊤
+t Σmix
+t
+wt
+|
+{z
+}
+riesgo
+−
+X
+i
+ci
+wi,t −wi,t−1
+
+|
+{z
+}
+costos de transacción
++ ηH
+
+−
+X
+i
+wi,t log wi,t
+
+|
+{z
+}
+H(wt)
+,
+(4)
+donde ηH ≥0 controla el incentivo de diversificación (opcional).
+5.
+Arquitectura del Agente (PPO/SAC con RNN)
+Actor recurrente πθ (LSTM/RNN) que, dado st y su estado oculto, devuelve logits ζt (o los
+parámetros de una política estocástica continua); Crítico Vϕ(st) (PPO) o redes Q recurrentes
+Qψ1, Qψ2 (SAC). El mapeo softmax asegura wt ∈∆n−1.
+6.
+Objetivo del Agente
+El objetivo es maximizar el retorno descontado:
+J(πθ) = Eπθ
+h Tm´ax
+X
+t=0
+γt Rt
+i
+,
+(5)
+con Rt dado por (4).
+2
+
+7.
+Flujo de Trabajo del Modelo (Interacción y Entrenamiento)
+Algorithm 1 DRL para Portafolios con Regímenes Bear–Bull (POMDP, Acciones Continuas)
+1: Entrada: datos de mercado {ri,t}, señales/probabilidades de régimen {pi,·,t}, λ, {ci}, ηH, γ
+2: Inicializar: pesos w0, parámetros θ, ϕ (y ψ1, ψ2 en SAC), estados ocultos LSTM en cero
+3: for epoch = 1, . . . , Nepochs do
+4:
+Reiniciar entorno y construir s0
+5:
+for t = 0, . . . , Tm´ax−1 do
+6:
+(Actor RNN) generar logits ζt ←πθ(st) y mapear wt = softmax(ζt)
+7:
+Ejecutar wt; observar rt+1 y (si aplica) pi,·,t+1
+8:
+Calcular Rt mediante (4)
+9:
+Construir st+1 e insertar transición en buffer (on-policy para PPO; replay secuencial
+para SAC)
+10:
+if PPO then
+11:
+Calcular ventajas (GAE) y targets; actualizar θ, ϕ vía pérdida clipped usando mini-
+batches de secuencias
+12:
+else
+▷SAC
+13:
+Muestrear secuencias del replay con burn-in; actualizar Qψ1, Qψ2 y política πθ (término
+soft) con redes objetivo
+14:
+Evaluar fuera de muestra: retorno, Sharpe, MaxDD, turnover, riesgo
+8.
+Relación con el Modelo de GAMS
+La recompensa (4) replica la función objetivo del modelo GAMS: retorno menos riesgo
+(w⊤
+t Σmix
+t
+wt) menos costos de transacción L1. Las probabilidades/reglas bear–bull que, en GAMS,
+forman los momentos mixtos ahora alimentan el estado y la transición. La política aprendida
+sustituye la resolución QP/NLP en cada t, manteniendo el mismo significado económico del
+trade-off retorno–riesgo–fricción y añadiendo adaptatividad.
+9.
+Validación y Métricas
+Validación rolling: entrenar en ventanas deslizantes y evaluar fuera de muestra. Reportar
+retorno anualizado, volatilidad, índices de Sharpe/Sortino, max drawdown, turnover y costo neto.
+Realizar estudios de sensibilidad en λ, ci y ηH, y pruebas de ablación (sin señales bear–bull; sin
+término de riesgo; sin costos).
+3
+

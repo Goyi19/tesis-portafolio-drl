@@ -1,0 +1,137 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+
+\title{\textbf{Clase 1: Planteamiento Matemático del Modelo Económico GAMS}}
+\author{Fase Cero: Comprensión y Diseño Conceptual}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Introducción al Problema}
+En la gestión de portafolios modernos, el problema fundamental consiste en decidir semana a semana cómo repartir el capital en distintos activos para maximizar las ganancias y sobrevivir a caídas agresivas del mercado. El modelo implementado en GAMS no es Machine Learning predictivo; es un sistema de \textbf{Optimización Determinista Intertemporal}. Esto significa que evalúa matemáticamente toda la línea de tiempo histórica para hallar, sin margen de error, el \textit{camino óptimo absoluto} de inversión asumiendo fricción (comisiones).
+
+A continuación, reestructuramos el modelo GAMS en su forma matemática formal para comprender cada variable de su anatomía.
+
+\section{Definición del Problema de Optimización}
+
+Tal como se plantea en optimización pura (Investigación de Operaciones), definiremos los índices, parámetros constantes, variables de decisión y restricciones.
+
+\subsection{1. Índices (El Espacio de Dimensionalidad)}
+\begin{itemize}
+    \item $t \in \{1, 2, \ldots, T\}$: Define los instantes de tiempo periódico (semanas). Nuestro dataset tiene $T = 163$ semanas.
+    \item $i, j \in \{1, 2, \ldots, N\}$: Define el espacio de activos financieros disponibles. Aquí $N=2$ (SPX y Cripto CMC200).
+\end{itemize}
+
+\subsection{2. Parámetros y Constantes (Datos de Entrada)}
+Estos son los valores fijos que se inyectan al solver al principio, los \textbf{Inputs}:
+\begin{itemize}
+    \item $\mu^{mix}_{i,t}$: \textbf{[Estimación Algorítmica]} El retorno esperado del activo $i$ en el tiempo $t$. Se forma ponderando los retornos empíricos en los dos regímenes de mercado. Matemáticamente:
+    \[ \mu^{mix}_{i,t} = p_{bull, t} \cdot \mu^{bull}_{i} + p_{bear, t} \cdot \mu^{bear}_{i} \]
+    Donde $p_{bull, t}$ y $p_{bear, t}$ son las probabilidades (suman 1) estimadas por un Modelo Oculto de Markov (HMM) de estar en régimen alcista o bajista respectivamente en esa semana. $\mu^{bull}_{i}$ y $\mu^{bear}_{i}$ son los retornos históricos promedio condicionales del activo $i$ bajo esos estados específicos. Adicionalmente a estas definiciones puras, cabe destacar que todas estas variables \textbf{no son inventadas ni asignadas por un humano}; se descubren autónomamente ajustando el algoritmo estadístico a los precios de cierre pasados provenientes de un archivo CSV financiero.
+    
+    \vspace{2mm}
+    \textit{\textbf{(Zoom sobre la Unidad de Medida: ¿Cómo se leen estos retornos $\boldsymbol{\mu}$?)}}\\
+    \textit{Es imperativo recalcar que $\mu$ \textbf{está en base porcentual, NO es dinero físico} (no son dólares ni euros) y \textbf{SÍ puede ser negativo} (indicando destrucción de valor). La unidad exacta de $\mu$ extraída de \texttt{ps.gms} es el \textbf{Retorno Logarítmico Semanal} (un decimal). Si la data histórica de Binance dice que la Cripto en un rally Bull saltó de \$100 a \$105 en 7 días, su $\mu^{bull}$ histórico es de $\approx 0.05$ (+5\% semanal). Si en un crash Bear cayó estrepitosamente, su $\mu^{bear}$ será negativo (ej. $-0.15$). Como todos los factores dentro de la sumatoria (los pesos $w$, la fricción $c_i$, la varianza $\Sigma$) son porcentajes unitarios, esto significa que la Función Objetivo Final $\mathbf{Z}$ \textbf{no maximiza billetes, sino que maximiza la tasa bruta de rendimiento porcentual} de toda la cartera. Es indiferente si operas con \$10 USD o con \$10 Millones, a Z solo le importa hallar el mejor porcentaje de ganancia neta en el tiempo.}
+    \item $\Sigma^{mix}_{i,j,t}$: \textbf{[Estimación Algorítmica]} La tasa de covarianza esperada entre el activo $i$ y el activo $j$ en el período $t$. Al igual que la media, esta matriz captura el riesgo del portafolio al ponderar probabilísticamente la volatilidad natural de cada régimen de mercado. Su construcción matemática es:
+    \[ \Sigma^{mix}_{i,j,t} = p_{bull, t} \cdot \Sigma^{bull}_{i,j} + p_{bear, t} \cdot \Sigma^{bear}_{i,j} \]
+    Donde $\Sigma^{bull}_{i,j}$ y $\Sigma^{bear}_{i,j}$ representan las matrices de varianzas-covarianzas puras extraídas históricamente cuando el mercado operaba bajo dictámenes estables \textit{Bull} o \textit{Bear}. Así, si el HMM detecta una alta $p_{bear, t}$ para esta semana, la \textit{volatilidad penalizadora} registrada en $\Sigma^{bear}$ inundará la ecuación proyectando inestabilidad financiera. Nuevamente, en términos de fuente, \textbf{el algoritmo HMM extrae en crudo y de forma autónoma} estas matrices estables tras digerir las fluctuaciones del dataset, sin intervención humana.
+    
+
+    \vspace{2mm}
+    \textbf{¿Qué miden realmente la Varianza y Covarianza ($\boldsymbol{\Sigma}$)?}\\
+    En finanzas, la matriz cuadrada $\Sigma_{i,j}$ (donde tanto las filas como las columnas son tus activos: SPX y Cripto) es tu radar de peligro. Alberga dos métricas vitales:
+    \begin{itemize}
+        \item \textbf{La Varianza (En la diagonal principal):} Mide la desviación matemática de un precio respecto a su propio promedio. Si la Cripto sube 20\% un mes y cae 15\% al siguiente, tiene una Varianza gigante. Es una "montaña rusa". Nuestro modelo resta esto de la ganancia porque una montaña rusa te puede quebrar justo cuando el modelo necesita cerrar posiciones.
+        \item \textbf{La Covarianza (Fuera de la diagonal):} El Santo Grial de los portafolios (Markowitz). Mide cómo "bailan" dos activos diferentes \textit{entre sí}. Si hay crisis y la Cripto cae, ¿qué hace el SPX? Si caen juntos, tienen covarianza \textbf{positiva} (peligro extremo, no hay dónde esconderse). Si cuando la Cripto cae, el SPX sube como refugio, tienen covarianza \textbf{negativa}. Al optimizador \textbf{Z} le fascina la covarianza negativa, ya que al combinar ambos activos en la ecuación, sus rebotes opuestos se anulan matemáticamente, resultando en un cruce seguro y blindado contra crisis sin sacrificar retorno.
+    \end{itemize}
+
+    Para nuestro caso preciso de 2 activos (S\&P 500 y Cripto CMC200), la matriz de covarianza pura es literalmente una tabla matemática de tamaño $2 \times 2$ con la varianza individual anclada en la diagonal principal y la covarianza compartida en los ejes cruzados:
+    \[
+    \Sigma = 
+    \begin{bmatrix}
+    \text{Var}(SPX) & \text{Cov}(SPX, Cripto) \\
+    \text{Cov}(Cripto, SPX) & \text{Var}(Cripto)
+    \end{bmatrix}
+    \]
+    Donde matemáticamente, para repasar su cálculo estadístico poblacional básico desde la fuente de datos históricos (donde $N$ es el total de semanas analizadas y $\mu$ los retornos promedio de esas semanas):
+    \begin{itemize}
+        \item \textbf{Fórmula de Varianza:} $\text{Var}(SPX) = \frac{1}{N} \sum_{t=1}^{N} \left( ret_{SPX, t} - \mu_{SPX} \right)^2$
+        \item \textbf{Fórmula de Covarianza:} $\text{Cov}(SPX, Cripto) = \frac{1}{N} \sum_{t=1}^{N} \left( ret_{SPX, t} - \mu_{SPX} \right) \left( ret_{Cripto, t} - \mu_{Cripto} \right)$
+    \end{itemize}
+    \textit{(Nota de Fuente: Esta matriz se auto-calcula triturando estadísticamente la historia cruda de mercado que el profesor incrustó en las primeras líneas de \texttt{data/gams/ps.gms} bajo los parámetros \texttt{ret\_semanal\_spx(t)} y \texttt{cmc200(t)}. El algoritmo extrae estas varianzas pasadas aplicando exactamente las dos fórmulas matemáticas de arriba para formar la matriz incondicional; GAMS no necesita calcular esto paso a paso, solo se remite a recibir la matriz lista y mezclarla usando la probabilidad de régimen actual).}
+    \item $\lambda$: \textbf{[Arbitrio Humano]} Escalar fijo de \textbf{Aversión al Riesgo}. \textbf{Ningún algoritmo puede calcular este número}. Es impuesto según la "psicología" del inversor o gestor de portafolio que usa el sistema (tú). Si pones $\lambda = 0.0$ eres un demente temerario; si pones $\lambda = 100$ eres un anciano ahorrador. En un análisis serio, haremos un bucle automático donde pondremos muchos $\lambda$ distintos para dibujar una "Frontera Eficiente".
+    \item $c_i$: \textbf{[Realidad del Mercado]} Costo de transacción o fricción. Este valor no se estima; \textbf{se lee del tarifario real del Broker}. Si para comerciar Cripto vas a Binance y cobran 1\%, inyectas duro un $0.01$. Si usas Interactive Brokers para el SPX y cobran 0.1\%, inyectas un $0.001$.
+\end{itemize}
+
+\subsection{3. Variables de Decisión (Lo que el modelo busca calcular)}
+\begin{itemize}
+    \item $w_{i,t}$: Variable continua \textbf{principal}. Es la proporción de nuestro capital total que invertimos en el activo $i$ en la semana $t$.
+    \item $u_{i,t}$: Variable continua \textbf{auxiliar}. Representa estrictamente la proporción del activo $i$ que fue \textit{comprada} en el instante $t$.
+    \item $v_{i,t}$: Variable continua \textbf{auxiliar}. Representa estrictamente la proporción del activo $i$ que fue \textit{vendida} en el instante $t$.
+\end{itemize}
+
+\section{La Función Objetivo: Utilidad en lugar de Dinero Bruto}
+El modelo GAMS busca maximizar ($Z$) una función de utilidad intertemporal:
+
+\begin{equation}
+\max_{w,u,v} Z = \sum_{t=1}^T \left[ \sum_{i=1}^N w_{i,t}\mu^{mix}_{i,t} - \lambda \sum_{i=1}^N \sum_{j=1}^N w_{i,t} w_{j,t} \Sigma^{mix}_{i,j,t} - \sum_{i=1}^N c_i (u_{i,t} + v_{i,t}) \right]
+\end{equation}
+
+Desglosando \textbf{por qué se plantea así} el interior de la gran sumatoria temporal $\sum_{t=1}^T$:
+\begin{enumerate}
+    \item \textbf{El Retorno Ponderado $\left(\sum_{i} w_{i,t}\mu^{mix}_{i,t}\right)$:} Es el ingreso bruto. Si pones 60\% en SPX y 40\% en Cripto, esta suma multiplica esos pesos por los retornos probabilísticos esperados de la semana.
+    \item \textbf{La Penalización de Varianza $\left(\lambda \sum_{i} \sum_{j} \dots \right)$:} La doble sumatoria matemática corresponde a la multiplicación de álgebra lineal matricial $(\mathbf{w}^\top \boldsymbol{\Sigma} \mathbf{w})$. \textit{¿Por qué una matriz 2x2?} Porque la volatilidad del portafolio no es solo la volatilidad de la Cripto más la volatilidad del SPX. Si la Cripto cae cuando el SPX sube (correlación negativa), los efectos se amortiguan. Si no restáramos esto, el optimizador pondría el 100\% en el activo con mayor $\mu$ ignorando que puede aniquilarte económicamente al día siguiente. 
+    \item \textbf{El Peaje de Fricción $\left(\sum_i c_i (u_{i,t} + v_{i,t})\right)$:} Esta sumatoria resta dinero real por cada porcentaje de la cartera que decidas reacondicionar. Si rotas agresivamente tus pesos, las sumatorias de $u$ y $v$ crecerán y tu $Z$ colapsará.
+\end{enumerate}
+
+\section{Restricciones del Problema (Bounds)}
+Un portafolio en la vida real tiene reglas infranqueables. Las restricciones obligan al solver a no proponer escenarios imposibles.
+
+\subsection{1. El Presupuesto Balanceado (Unidad de Capital)}
+\begin{equation}
+\sum_{i=1}^N w_{i,t} = 1 \quad \forall t
+\end{equation}
+Obliga a que la suma del porcentaje invertido en SPX y Cripto sea \textbf{exactamente 100\%} del dinero, en todo momento $t$. El modelo no asume dinero prestado (no hay apalancamiento) ni permite dejar efectivo inactivo sin modelar explícitamente una "cuenta de banco o bono seguro".
+
+\subsection{2. Sin Posiciones en Corto (No Short-Selling)}
+\begin{equation}
+w_{i,t} \ge 0, \quad u_{i,t} \ge 0, \quad v_{i,t} \ge 0 \quad \forall i, t
+\end{equation}
+Ningún peso puede ser negativo. Esto impide al modelo hacer ``ventas en corto" (pedir activos prestados para beneficiarse de caídas bursátiles extremas).
+
+\subsection{3. Fricción Lineal (El Truco L1 u/v)}
+La parte más elegante del código original. El cambio de la cartera respecto a la semana pasada es el valor absoluto: $|w_{i,t} - w_{i,t-1}|$. Sin embargo, el valor absoluto "rompe" la derivada suave que un optimizador veloz como GAMS o IPOPT necesita para descender por el gradiente matemático. Para puentearlo, se restringe matemáticamente la evolución del peso usando dos variables (\textit{compra} y \textit{venta}):
+\begin{equation}
+w_{i,t} - w_{i,t-1} = u_{i,t} - v_{i,t} \quad \forall i, t>1
+\end{equation}
+Al restringir de esta forma e incluir \textit{gastos} por uso de $u$ y $v$ en la función objetivo, la matemática \textbf{garantiza intrínsecamente} que si $w$ crece, solo crecerá $u$ (dejando a $v=0$) y viceversa. Logra el mismo efecto penalizador de $|x|$ con ecuaciones completamente lineales y estables.
+
+\vspace{1mm}
+Para entender esto, imaginemos que tu portafolio ideal manda que SPX pase de un peso de $0.3$ a $0.6$ ($\Delta = +0.3$). La restricción dice: $0.6 - 0.3 = u - v \implies 0.3 = u - v$. 
+Dado que obligamos a que $u$ y $v$ sean positivos (Restricción 2), el Optimizador se topa con infinitas soluciones posibles: probar $u=0.3, v=0$ matemáticamente es igual de válido que probar $u=100.3, v=100$. ¿Por qué elige la primera? ¡Por la Función Objetivo $Z$! Recuerda que $Z$ te resta ferozmente la comisión: $- \sum c_i(u+v)$. Al modelo le "duele" usar $u$ y le "duele" usar $v$. En su infinita tacañería para maximizar ganancia, escogerá los valores más pequeños posibles que satisfagan ambas cosas: aplasta $v$ a $0$ y deja vivo el $u=0.3$ estricto. Así, $u$ toma el rol orgánico de una variable "Compra", multiplicándose perfectamente con la comisión en $Z$, todo sin requerir condicionales \texttt{IF} que volverían loca y lenta a la computadora.
+
+\section{Resultado Final: ¿Qué Escupe este Modelo GAMS?}
+Tras compilar y resolver toda esta enorme maquinaria matemática durante cientos de semanas históricas al mismo tiempo, lo que obtienes de vuelta no es un valor monetario final (aunque GAMS calcule Z, tú no imprimes esa utilidad en tu cuenta bancaria). El núcleo vital del resultado de GAMS es dictarte la \textbf{Política Óptima de Inversión}: un enorme historial matemático tabulado con los valores definitivos de $\mathbf{w_{i,t}}$ de principio a fin.
+
+Es decir, GAMS te escupe un listado perfecto (el "Camino de Dios") instruyéndote exáctamente de qué debiste hacer:
+\begin{itemize}
+    \item \textbf{Semana 1:} Pon $60\%$ de tu dinero en SPX y $40\%$ en Cripto ($w_{SPX,1}=0.6, w_{Cripto,1}=0.4, \text{Costo}=\$X$).
+    \item \textbf{Semana 2:} Los HMM preveen crisis, GAMS colapsa su riesgo, y te exige rotar la cartera agresivamente a $100\%$ SPX y $0\%$ Cripto para blindarte ($w_{SPX,2}=1.0, w_{Cripto,2}=0.0, \text{Costo}=\$Y$).
+\end{itemize}
+Nuevamente, no importa si empezaste la semana con $\$1.000$ CLP o $\$1.000.000$ USD; tu único trabajo como Inversor Humano es mirar esos valores $w_{t}$, abrir tu app de finanzas local, y hacer las transacciones (comprando y vendiendo el delta entre semanas, pagando la temida comisión $c_i$) para asegurarte de que tu porción de torta coincida ciegamente con esos porcentajes.
+
+\section{Conclusión Evolutiva hacia DRL}
+\textbf{¿Nos pasaremos a este modelo?}
+No. GAMS resolverá esto utilizando una descomunal matriz Sparse determinista viendo el tiempo intertemporal $\sum_{t=1}^T$ de inicio a fin simultáneamente.
+Utilizaremos Deep Reinforcement Learning porque queremos recrear a un Agente Inversor Reactivo, que observe los Parámetros (Inputs) semana a semana y emita Variables de Decisión ($w_{i,t}$) a ciegas pero con inteligencia entrenada, sufriendo temporalmente la misma Función Objetivo económica como función de recompensa paso a paso.
+
+\end{document}

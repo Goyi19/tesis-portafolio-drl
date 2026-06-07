@@ -1,0 +1,90 @@
+\documentclass[12pt,a4paper]{report}
+
+% Paquetes de formato
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{times} % Times New Roman
+\usepackage{setspace}
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=3cm]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{float}
+\usepackage{natbib} % Estilo Harvard
+
+% Interlineado 1.5
+\onehalfspacing
+
+% Datos de la Portada
+\title{CONSTRUCCIÓN DE PORTAFOLIOS DE INVERSIÓN CON DEEP REINFORCEMENT LEARNING}
+\author{RODRIGO VALENZUELA T.}
+\date{SANTIAGO, SEPTIEMBRE DE 2026}
+
+\begin{document}
+
+% --- Portada ---
+\begin{titlepage}
+    % Logo en la esquina superior izquierda
+    \begin{flushleft}
+        \includegraphics[width=4cm]{figuras/logo.png} % Ajusta el tamaño según sea necesario
+    \end{flushleft}
+    
+    \vspace*{3cm}
+    
+    \begin{center}
+        \Large{\textbf{CONSTRUCCIÓN DE PORTAFOLIOS DE INVERSIÓN CON DEEP REINFORCEMENT LEARNING}}
+        
+        \vspace{3cm}
+        
+        \normalsize
+        RODRIGO VALENZUELA T.
+        
+        \vspace{3cm}
+        
+        MEMORIA PARA OPTAR AL TÍTULO DE \\
+        INGENIERO CIVIL INDUSTRIAL
+        
+        \vspace{1cm}
+        
+        PROFESOR GUÍA: JUAN PÉREZ RETAMALES \\
+        PROFESOR CO-GUÍA: PAOLO LATORRE
+        
+        \vfill
+        
+        SANTIAGO, SEPTIEMBRE DE 2026
+    \end{center}
+\end{titlepage}
+
+% --- Agradecimientos ---
+\newpage
+\chapter*{Agradecimientos}
+% En blanco por el momento según indicaciones.
+\newpage
+
+% --- Índice ---
+\tableofcontents
+\newpage
+\listoffigures
+\newpage
+\listoftables
+\newpage
+
+% --- Resumen ---
+\chapter*{Resumen}
+\addcontentsline{toc}{chapter}{Resumen}
+% El resumen se redactará al finalizar la memoria.
+\newpage
+
+% --- Capítulos ---
+\include{capitulos/01_introduccion}
+\include{capitulos/02_marco_teorico}
+\include{capitulos/03_metodologia}
+% \include{capitulos/04_resultados}
+% \include{capitulos/05_sensibilidad}
+% \include{capitulos/06_conclusiones}
+
+% --- Bibliografía ---
+\bibliographystyle{apalike} % Aproximación al estilo Harvard
+\bibliography{referencias}
+
+\end{document}

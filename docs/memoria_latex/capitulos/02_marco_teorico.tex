@@ -1,0 +1,48 @@
+\chapter{Marco Teórico}
+
+En el presente capítulo se exponen los fundamentos conceptuales y matemáticos sobre los cuales se desarrolla la metodología de esta memoria. Inicialmente, se revisa la Teoría Clásica de Portafolios, abordando los enfoques tradicionales de optimización de inversiones. A continuación, se introducen los conceptos centrales del Aprendizaje por Refuerzo Profundo (Deep Reinforcement Learning, DRL), los Procesos de Decisión de Markov (MDP) y los algoritmos específicos de frontera utilizados (PPO y SAC). Finalmente, se define el contexto de los regímenes de mercado y su modelación estadística a través de Modelos Ocultos de Markov (HMM).
+
+\section{Teoría de Portafolio Clásica}
+
+\subsection{Modelo de Markowitz y Optimización Media-Varianza}
+La Teoría Moderna de Portafolios (Modern Portfolio Theory o MPT), propuesta por \citet{markowitz1952portfolio}, revolucionó la forma en que los inversionistas construyen sus carteras. El modelo se fundamenta en la premisa de que un inversionista racional es averso al riesgo; es decir, frente a dos carteras con el mismo retorno esperado, preferirá aquella con menor nivel de riesgo. 
+
+Matemáticamente, el retorno esperado de un portafolio se define como la suma ponderada de los retornos esperados de los activos individuales, mientras que el riesgo se cuantifica mediante la varianza (o desviación estándar) de los retornos del portafolio. Este riesgo no solo depende de la varianza de cada activo, sino fundamentalmente de las covarianzas entre ellos, lo que introduce el principio de la diversificación. El problema de optimización busca minimizar la varianza del portafolio dado un retorno objetivo, o equivalentemente, maximizar el retorno esperado para un nivel máximo de riesgo tolerable. Una limitación inherente de este modelo es su tendencia a generar ``corner solutions'', es decir, carteras altamente concentradas en pocos activos y sumamente sensibles a pequeños errores en la estimación de las medias y covarianzas.
+
+\subsection{Ratios de Desempeño: Sharpe y Sortino}
+Para evaluar la calidad de un portafolio más allá de su simple retorno absoluto, se introdujeron métricas que penalizan el retorno en función del riesgo asumido. El \textbf{Ratio de Sharpe} \citep{sharpe1966mutual} mide el exceso de retorno (o prima de riesgo) obtenido por unidad de volatilidad (desviación estándar total). Su objetivo es identificar portafolios que maximicen esta relación. Sin embargo, este ratio no discrimina entre desviaciones positivas y negativas, penalizando equivocadamente los retornos inesperadamente altos.
+
+Para subsanar esta deficiencia, surge el \textbf{Ratio de Sortino} \citep{sortino1994performance}, el cual reemplaza la desviación estándar total del denominador por la desviación a la baja (\textit{downside deviation}). De este modo, solo se penaliza la volatilidad que genera pérdidas respecto a un retorno mínimo aceptable, permitiendo a los inversores beneficiarse de la volatilidad positiva sin ser penalizados por ella.
+
+\subsection{Entropía de Shannon y Diversificación}
+Una alternativa complementaria al modelo de Markowitz es la inclusión de la \textbf{Entropía de Shannon} \citep{shannon1948mathematical} en la función objetivo. La entropía mide el grado de dispersión en la distribución de las ponderaciones del portafolio. Maximizar la entropía favorece la diversificación, evitando la hiper-concentración. El modelo Ingenuo (\textit{Naive} o \textit{Equally-Weighted}), que asigna la misma ponderación a todos los activos ($1/N$), representa el límite superior de máxima entropía, operando bajo el principio de total ignorancia sobre el desempeño futuro de los activos.
+
+\section{Deep Reinforcement Learning (DRL)}
+
+El Aprendizaje por Refuerzo (Reinforcement Learning o RL) es un paradigma del aprendizaje automático donde un agente aprende a tomar decisiones óptimas interactuando continuamente con un entorno estocástico \citep{sutton2018reinforcement}. A diferencia del aprendizaje supervisado, el agente no recibe ejemplos etiquetados sobre qué acciones tomar, sino que debe descubrir las acciones más rentables mediante un esquema de exploración y explotación, guiado por una señal escalar denominada recompensa.
+
+\subsection{Proceso de Decisión de Markov (MDP) y Ecuación de Bellman}
+El marco matemático subyacente para modelar estos problemas secuenciales es el Proceso de Decisión de Markov (MDP) \citep{bellman1957markovian}. Un MDP se define formalmente por la tupla $\langle S, A, P, R, \gamma \rangle$:
+\begin{itemize}
+    \item $S$: Espacio de estados que contiene la información observable del entorno.
+    \item $A$: Espacio de acciones posibles a tomar por el agente.
+    \item $P(s'|s,a)$: Dinámica de transición, que representa la probabilidad de transitar al estado $s'$ al ejecutar la acción $a$ desde el estado $s$.
+    \item $R(s,a)$: Función de recompensa inmediata recibida tras ejecutar $a$ en $s$.
+    \item $\gamma \in (0, 1]$: Factor de descuento que pondera la importancia de las recompensas futuras frente a las inmediatas.
+\end{itemize}
+
+El objetivo del agente es aprender una política $\pi(a|s)$ que maximice el retorno acumulado descontado a lo largo del tiempo. Para ello, se basa en la \textbf{Ecuación de Bellman}, que descompone el valor esperado de un estado en la recompensa inmediata más el valor esperado descontado del siguiente estado. Esta formulación recursiva es el cimiento de los algoritmos de valor y política utilizados en DRL.
+
+\section{Algoritmos PPO y SAC}
+En entornos con espacios de acciones continuos y de alta dimensionalidad, como es la distribución porcentual de capital en $N$ activos, los algoritmos basados en redes neuronales profundas que parametrizan la política de forma directa son esenciales.
+
+\subsection{Proximal Policy Optimization (PPO)}
+El algoritmo PPO \citep{schulman2017proximal} es un método de tipo Actor-Crítico (\textit{on-policy}) reconocido por su estabilidad empírica y facilidad de sintonización. PPO optimiza una función objetivo ``recortada'' (\textit{clipped surrogate objective}) que limita severamente el tamaño de la actualización de la política en cada paso de entrenamiento. Al evitar que la nueva política difiera excesivamente de la antigua, PPO previene caídas catastróficas en el desempeño. La arquitectura del agente consta de una red neuronal Actor, responsable de emitir las probabilidades de acción (o en su defecto, la media y desviación estándar de una distribución continua), y una red Crítica que estima la función de valor del estado para calcular la ventaja de la acción tomada.
+
+\subsection{Soft Actor-Critic (SAC)}
+Por otro lado, SAC \citep{haarnoja2018soft} es un algoritmo \textit{off-policy} que integra el principio de optimización de máxima entropía. A diferencia del RL estándar, el objetivo en SAC no es solo maximizar la recompensa acumulada, sino también la entropía de la política. Esto incentiva al agente a explorar ampliamente el espacio de acciones y adoptar políticas estocásticas más robustas. SAC utiliza una estructura que incluye un Actor estocástico y múltiples redes Críticas (generalmente redes Q) para mitigar la sobrestimación del valor. Gracias a su naturaleza \textit{off-policy}, SAC reutiliza de forma muy eficiente los datos pasados almacenados en un \textit{Replay Buffer}, logrando convergencias más rápidas en términos de interacción con el entorno en comparación con métodos \textit{on-policy}.
+
+\section{Regímenes de Mercado y Modelos Ocultos}
+En la dinámica real de los mercados financieros, los retornos de los activos no son estacionarios. El mercado transita entre distintos regímenes macroeconómicos, típicamente simplificados en estados \textit{Bull} (tendencias alcistas, baja volatilidad) y \textit{Bear} (tendencias bajistas, alta volatilidad e incertidumbre).
+
+Para modelar esta latencia, es común recurrir a los Modelos Ocultos de Markov (HMM, por sus siglas en inglés) \citep{baum1966statistical}. En un HMM, el régimen actual del mercado se considera una variable oculta que obedece a las propiedades de una cadena de Markov. Sin embargo, aunque el régimen exacto no se puede observar directamente, sí se pueden observar sus emisiones, que en este contexto corresponden a los retornos históricos y la volatilidad de los activos. Mediante inferencia bayesiana, es posible calcular las probabilidades de pertenencia a un régimen \textit{Bear} o \textit{Bull} en cualquier instante del tiempo, proporcionando al agente DRL señales probabilísticas cruciales (incorporadas en el vector de estado $s_t$) para adaptar dinámicamente su aversión al riesgo y su estrategia de asignación de capital.

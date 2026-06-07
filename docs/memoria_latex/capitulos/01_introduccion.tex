@@ -1,0 +1,30 @@
+\chapter{Introducción}
+
+\section{Contexto y Motivación}
+En la actualidad, los mercados financieros se caracterizan por una creciente complejidad y un dinamismo continuo, lo que dificulta significativamente la labor de toma de decisiones en el ámbito de las inversiones. Tradicionalmente, la construcción y gestión de portafolios de inversión se ha basado en fundamentos analíticos clásicos, como la Teoría Moderna de Portafolios (MPT) propuesta por Harry Markowitz. Si bien estos modelos han cimentado las bases para equilibrar el retorno esperado y el riesgo, suelen depender de supuestos restrictivos sobre la distribución y estacionariedad de los retornos financieros.
+
+A medida que la disponibilidad de datos a gran escala ha aumentado y el poder de cómputo se ha expandido, ha surgido una necesidad imperante de adoptar herramientas de optimización automatizadas y más sofisticadas. Los regímenes de mercado cambian abruptamente entre periodos de crecimiento sostenido (estados \textit{Bull}) y etapas de recesión o alta volatilidad (estados \textit{Bear}). Esta variabilidad demanda estrategias de asignación de capital que sean no solo eficientes, sino también altamente adaptables frente a condiciones de observabilidad parcial de los estados del mercado.
+
+Bajo este contexto, el Aprendizaje por Refuerzo Profundo (Deep Reinforcement Learning o DRL) emerge como una solución vanguardista. A diferencia de los enfoques estáticos o de un solo periodo, el DRL permite modelar el mercado como un entorno estocástico donde un agente aprende estrategias dinámicas, interactuando secuencialmente, tomando acciones y recibiendo recompensas basadas en el desempeño del portafolio.
+
+\section{Definición del Problema}
+La formulación tradicional del problema de asignación de activos a menudo se ha abordado mediante modelos de optimización deterministas. En muchos estudios y aplicaciones industriales, se emplea la plataforma GAMS (General Algebraic Modeling System) utilizando enfoques de horizonte rodante (\textit{rolling horizon}) o paradigmas \textit{Smart-Predict-then-Optimize} (SPO). 
+
+Sin embargo, estos modelos convencionales presentan limitaciones considerables. En primer lugar, la resolución de problemas de optimización deterministas periodo a periodo bajo un horizonte móvil puede volverse computacionalmente costosa y reactiva en exceso. En segundo lugar, y más importante, la naturaleza determinista de estos esquemas tradicionales restringe su capacidad para anticipar y adaptarse proactivamente a las transiciones ocultas en los regímenes de mercado. Al asumir parámetros estáticos para periodos futuros inmediatos, el modelo GAMS es propenso a subestimar el riesgo en caídas abruptas de mercado, o a generar altos costos de transacción debidos a rebalanceos excesivos no contemplados en una estrategia a largo plazo.
+
+Por consiguiente, el problema radica en diseñar una política de inversión que supere las deficiencias de los enfoques deterministas miopes. Se requiere un modelo capaz de aprender patrones subyacentes complejos y de gestionar activamente el compromiso o \textit{trade-off} entre la maximización de retornos, la mitigación del riesgo y el impacto directo de los costos de transacción, todo esto dentro de un mercado parcialmente observable que transita entre ciclos \textit{Bear} y \textit{Bull}.
+
+\section{Objetivos}
+
+\subsection{Objetivo General}
+Desarrollar, implementar y comparar políticas dinámicas de asignación de portafolio mediante algoritmos de Deep Reinforcement Learning, específicamente Proximal Policy Optimization (PPO) y Soft Actor-Critic (SAC), con el propósito de maximizar el retorno esperado del portafolio ajustado por el riesgo y los costos de transacción, en presencia de regímenes de mercado parcialmente observables.
+
+\subsection{Objetivos Específicos}
+Para alcanzar el objetivo general propuesto, se definen los siguientes objetivos específicos:
+\begin{enumerate}
+    \item Formular formalmente el problema de gestión de portafolios como un Proceso de Decisión de Markov Parcialmente Observable (POMDP), definiendo rigurosamente el espacio de estados, acciones, transición y función de recompensa.
+    \item Implementar un entorno de simulación financiero estandarizado (Gym) que integre series de tiempo reales, modelos probabilísticos para señales de mercado y lógica de rebalanceo de activos considerando fricciones.
+    \item Desarrollar y entrenar agentes mediante PPO y SAC incorporando arquitecturas de redes neuronales recurrentes para el manejo efectivo de la observabilidad parcial de los regímenes \textit{Bear} y \textit{Bull}.
+    \item Evaluar y comparar empíricamente el desempeño fuera de muestra de los agentes DRL contra los resultados obtenidos por benchmarks convencionales, tales como la solución determinista de GAMS en horizonte móvil y la estrategia \textit{Buy-and-Hold}.
+    \item Realizar estudios de sensibilidad sobre los hiperparámetros clave y factores económicos, como la aversión al riesgo y los costos de transacción, para comprobar la robustez de las políticas aprendidas.
+\end{enumerate}
