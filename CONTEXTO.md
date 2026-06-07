@@ -4,20 +4,23 @@
 * **Autor:** Rodrigo Valenzuela T.
 * **Profesor Guía:** Juan Pérez
 * **Tema:** Optimización de construcción de portafolios de inversión con Deep Reinforcement Learning (DRL).
-* **Objetivo Principal:** Aprender una política de asignación de portafolio que determine las proporciones a invertir en cada activo maximizando el retorno esperado, ajustado por riesgo y costos de transacción, considerando regímenes de mercado (Bear/Bull) modelados con HMM (Hidden Markov Models).
+* **Objetivo Principal:** Desarrollar y comparar políticas de asignación de portafolio mediante algoritmos PPO y SAC que maximicen el retorno ajustado por riesgo y costos de transacción, frente a modelos deterministas clásicos (GAMS) y estrategias Buy-and-Hold.
 
 ## 2. Estado Actual del Proyecto
-* **Hito 1 (Completado):** Se estudiaron y definieron los modelos matemáticos base (Markowitz, Entropía de Shannon, Modelo Naive, Ratios de Sharpe y Sortino). Se introdujo la teoría base de Reinforcement Learning (MDP, Ecuación de Bellman).
-* **Hito 2 (Completado):** Se formuló el problema como un POMDP continuo. Se definió la arquitectura DRL (PPO/SAC con redes recurrentes LSTM/RNN) para competir contra el optimizador determinista en GAMS.
-* **Modelo Teórico y HMM (Completado):** Se documentó exhaustivamente la matemática detrás de GAMS, incluyendo la función objetivo con retornos mixtos ($\mu^{mix}$), covarianza ($\Sigma^{mix}$), aversión al riesgo ($\lambda$) y costos de transacción ($c_i$).
+* **Fase de Desarrollo y Código (Completada):** Ya se ha implementado con éxito todo el entorno computacional en Python y se han corrido los experimentos.
+  * Entorno Gym (`portfolio_env.py`) creado.
+  * Agentes DRL (`ppo_agent.py` y `sac_agent.py`) entrenados e implementados.
+  * Análisis de sensibilidad (aversión al riesgo $\lambda$ y costos de transacción $c_i$) ejecutados. Todos los gráficos de métricas y validación están generados en la carpeta `results/figures/`.
+* **Fase de Escritura de la Memoria (Actual):** Nos encontramos redactando la memoria formal de título en base al documento "Estructura Capitulos Memoria". El documento abarca 6 capítulos principales (Introducción, Marco Teórico, Metodología, Implementación y Resultados, Sensibilidad y Conclusiones).
 
-## 3. Decisiones Clave Tomadas
-* El agente DRL debe emular el comportamiento del optimizador GAMS pero sin mirar el futuro completo, usando solo datos históricos pasados (Frame Stacking) y aproximando la probabilidad de estados Bear/Bull.
-* Se incluirá una penalización por Entropía en el DRL para forzar la exploración inicial y evitar que el modelo se congele en un solo activo.
+## 3. Decisiones Clave y Metodología
+* **Datos:** Se usan activos S&P 500 (SPX) y Criptomonedas (CMC200), particionados en Train (70%), Val (15%) y Test (15%).
+* **Arquitectura:** Se utilizaron modelos PPO y SAC con arquitecturas recurrentes (LSTM/RNN) para lidiar con la observabilidad parcial del mercado (regímenes Bear/Bull, deducidos con HMM).
+* **Rúbrica de Redacción (Crítico):** Toda la escritura debe seguir formato estrictamente académico: tercera persona (voz impersonal), estilo formal, párrafos con una sola idea principal, uso de conectores discursivos, y estilo de citas Harvard.
 
 ## 4. Próximos Pasos Inmediatos
-* **Paso Actual:** Codificar estrictamente el bloque "MOTOR" en Python usando **IPOPT (Pyomo)**.
-* **Meta:** Lograr que al pasarle a Python los mismos datos crudos del profesor, el script arroje el **mismo rendimiento numérico exacto** que el modelo GAMS. Esta será la prueba de validación antes de entrenar al agente DRL.
+* **Paso Actual:** Continuar con la redacción y revisión de la tesis en base a la "Rúbrica de Escritura".
+* *(Nota: Actualizar este punto al finalizar cada sesión de trabajo para detallar exactamente en qué capítulo, párrafo o sección de la memoria nos quedamos trabajando)*.
 
 ---
 *Nota para la IA: Si estás leyendo esto al inicio de una sesión en un nuevo computador, utiliza este documento para recuperar el contexto y continuar trabajando en la sección de "Próximos Pasos Inmediatos".*
