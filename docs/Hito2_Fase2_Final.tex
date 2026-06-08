@@ -1,0 +1,103 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{float}
+\usepackage[space]{grffile}
+\geometry{a4paper, margin=1in}
+
+\title{Hito2- PT2: \\ \large Implementación Computacional y Análisis Técnico-Económico (PPO vs SAC)}
+\author{Rodrigo Valenzuela T.}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Implementación Computacional y Entorno}
+La resolución del modelo de portafolios de inversión utilizando Inteligencia Artificial requirió la construcción de un entorno computacional que traduzca el problema matemático continuo en un Proceso de Decisión de Markov (MDP). Este desarrollo se basó en los estándares de las librerías \texttt{gymnasium}.
+
+\subsection{Documentación de Datos y Estados}
+El proyecto se basa en observaciones semanales de dos activos: el S\&P 500 (SPX) y el índice de criptomonedas CMC Crypto 200 (CMC200), abarcando 163 semanas. Los datos se dividieron metodológicamente en: Entrenamiento (Semanas 1-114), Validación (115-138) y Prueba (139-163).
+El vector de características del mercado se construyó integrando probabilidades de regímenes bajistas/alcistas calculadas mediante Modelos Ocultos de Markov (HMM). Para evitar inestabilidades numéricas en las redes neuronales, estas características se normalizaron mediante $Z-Score$ expansivo.
+
+\subsection{Reglas Financieras del Entorno}
+La función de recompensa del entorno penaliza activamente la varianza ponderada por el parámetro de aversión al riesgo ($\lambda$) e incorpora un esquema asimétrico de costos de transacción ($c_i$): $0.5\%$ para SPX y $1.0\%$ para CMC200. El espacio de acciones está delimitado a vectores de ponderación de capital positivos que suman siempre 1 (Proyección Símplex), inhabilitando posiciones cortas.
+Para prevenir el sobreajuste (\textit{overfitting}), el entorno inyecta estocásticamente \textit{Ruido Gaussiano} a las observaciones e inicia los episodios en intervalos aleatorios (\textit{Random Start}).
+
+\section{Análisis Técnico: PPO vs SAC}
+Se implementaron dos enfoques del estado del arte en Aprendizaje por Refuerzo Profundo: \textit{Proximal Policy Optimization} (PPO) y \textit{Soft Actor-Critic} (SAC). A diferencia del modelo teórico GAMS que requiere conocimiento perfecto del futuro, ambos agentes aprenden políticas reactivas aplicables en tiempo real.
+
+\subsection{Ventajas Técnicas (PPO y SAC)}
+\begin{itemize}
+    \item \textbf{PPO (Estabilidad de Entrenamiento):} Su arquitectura \textit{On-Policy} incorpora una función objetivo recortada (\textit{clip range} de 0.2). Esto garantiza una ventaja técnica crucial: evita que las actualizaciones de los gradientes destruyan la política aprendida si un batch de datos resulta anómalo, logrando una convergencia matemática muy estable y predecible.
+    \item \textbf{SAC (Exploración y Resiliencia):} Su ventaja técnica fundamental radica en la maximización automática de entropía (\texttt{ent\_coef="auto"}). Esto fuerza a la red a mantener una política estocástica, previniendo que converja prematuramente a decisiones subóptimas locales. Además, al ser \textit{Off-Policy}, reutiliza experiencias pasadas (Replay Buffer de 100,000 transiciones), haciéndolo más eficiente en el uso de datos. Finalmente, su uso de una doble red crítica mitiga el sesgo histórico de sobreestimación de recompensas que afecta a otros modelos.
+\end{itemize}
+
+\subsection{Desventajas Técnicas (PPO y SAC)}
+\begin{itemize}
+    \item \textbf{PPO (Ineficiencia de Muestra):} Al ser \textit{On-Policy}, PPO no puede reutilizar experiencias antiguas. Esto lo obliga a interactuar decenas de miles de veces adicionales con el entorno para recopilar datos frescos, elevando el costo computacional temporal del entrenamiento frente a enfoques analíticos clásicos.
+    \item \textbf{SAC (Inestabilidad Paramétrica):} SAC es computacionalmente más pesado por la gestión simultánea del Actor, los dos Críticos y el ajuste de la temperatura de entropía ($\alpha$). Una descalibración en la tasa de aprendizaje ($\tau$) puede volver inestable la convergencia.
+    \item \textbf{Falta de Explicabilidad (Caja Negra):} A diferencia del benchmark determinista matemático (GAMS), donde la asignación es explicable vía derivadas parciales, es matemáticamente opaco rastrear por qué la red neuronal seleccionó pesos específicos intra-capa en un periodo de estrés.
+\end{itemize}
+
+\section{Análisis Económico y Desempeño Base}
+Se evaluaron los Modelos Base asumiendo un escenario estándar ($\lambda = 0.10$, fricción alta). Como se observa en la Figura \ref{fig:bases_test}, PPO mostró una curva de crecimiento sostenida y conservadora superando los \$18.000, mientras que SAC, empujado por su naturaleza exploratoria, generó retornos subóptimos, manteniéndose apenas sobre los \$11.000, muy por debajo de la base de comparación.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.48\textwidth]{"../results/figures/Modelo_Base/Capital_test.png"}
+    \hfill
+    \includegraphics[width=0.48\textwidth]{"../results/figures/Modelo_Base_SAC/Capital_test.png"}
+    \caption{Rendimiento Económico: PPO (Izquierda) vs SAC (Derecha).}
+    \label{fig:bases_test}
+\end{figure}
+
+\section{Análisis de Sensibilidad Económica y Fricción}
+Para entender las debilidades y fortalezas financieras de las estrategias automatizadas, se ejecutó un riguroso análisis de sensibilidad variando la fricción y el factor de miedo al riesgo ($\lambda$).
+
+\subsection{Impacto de Costos Transaccionales (Chattering)}
+Cuando el algoritmo no es calibrado adecuadamente, tiende al \textit{Chattering} (rotación destructiva intentando anticipar cada micro-movimiento). La Figura \ref{fig:sensibilidad_dual} muestra de manera innegable cómo escenarios de alta fricción destruyen el capital, afectando de manera dramática a SAC por sobre PPO.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.48\textwidth]{"../results/figures/Analisis_Sensibilidad/Capital_Dual_test.png"}
+    \hfill
+    \includegraphics[width=0.48\textwidth]{"../results/figures/Analisis_Sensibilidad_SAC/Capital_Dual_test.png"}
+    \caption{Sensibilidad a la Fricción: Modelos PPO (Izq) vs SAC (Der).}
+    \label{fig:sensibilidad_dual}
+\end{figure}
+
+\subsection{Ventajas Económicas del Modelo DRL}
+La ventaja económica absoluta del DRL bien calibrado (PPO) radica en su \textbf{Protección contra Caídas Sistémicas (Downside Protection)} sumado a retornos absolutos superiores. 
+Como se aprecia en la Tabla 1, la mejor variante de PPO cerró el periodo de Test con \$18,594.37, destrozando el rendimiento de la estrategia estática \textit{Naive Buy \& Hold} (\$14,866.59). Los agentes DRL lograron interpretar las señales del modelo oculto (HMM) para desinvertir del criptoactivo (CMC200) y refugiarse en el S\&P 500 antes de contracciones masivas, lo que le permitió un \textit{Drawdown} razonable de 5.77\% maximizando el Sharpe (3.94).
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Modelo OOS (Test)} & \textbf{Cap. Final (\$)} & \textbf{Recompensa} & \textbf{Sharpe} & \textbf{Max DD (\%)} & \textbf{Rotación (\%)} \\
+\hline
+\textbf{PPO Mejor Variante} & \$18,594.37 & -0.0346 & 3.94 & 5.77 & 3.41 \\
+\textbf{PPO Base Oficial} & \$18,081.23 & 0.0077 & 3.64 & 5.61 & 4.97 \\
+\textbf{Naive B\&H (50/50)} & \$14,866.59 & 0.0000 & 4.30 & 2.26 & 0.00 \\
+\textbf{Rebalanceo Constante (CRP)} & \$14,632.04 & 0.0000 & 4.63 & 2.16 & 0.00 \\
+\textbf{SAC Mejor Variante (L1.1\_Alta)} & \$11,499.84 & 0.0166 & 2.29 & 8.93 & 1.81 \\
+\textbf{SAC Base Oficial (L0.3\_Alta)} & \$11,080.90 & 0.0230 & 1.67 & 8.93 & 2.08 \\
+\hline
+\end{tabular}}
+\caption{Contraste Económico Directo: PPO vs SAC vs Estrategias Pasivas.}
+\end{table}
+
+\subsection{Desventajas Económicas del Modelo DRL (El Fracaso de SAC)}
+La principal desventaja económica evidenciada en este análisis (y respaldada numéricamente en la Tabla 1) es que el \textbf{Costo de Transacción es el verdugo del DRL si hay exceso de exploración}. 
+
+El caso de SAC es el ejemplo perfecto de una desventaja económica crítica: su mandato técnico de "maximizar la entropía" lo fuerza a mantener una política estocástica. En el entorno real, esto se tradujo en que SAC jamás pudo retener una posición estable sin "experimentar" con sus pesos semanales, lo que derivó en pago constante de comisiones altas (1.0\% en cripto) por rebalanceos micro. Como resultado, todas las variantes de SAC (incluso la mejor, que terminó con \$11,499.84) \textbf{fueron incapaces de vencer a una estrategia pasiva "tonta"} como el Naive B\&H (\$14,866.59). 
+
+Esto demuestra que en arquitecturas DRL \textit{Off-Policy} aplicadas a finanzas, la ganancia marginal de intentar hacer \textit{timing} exploratorio al mercado es absorbida íntegramente por el \textit{spread} del broker, convirtiéndose en una pérdida de capital neta.
+
+\end{document}

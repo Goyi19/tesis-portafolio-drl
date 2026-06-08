@@ -1,0 +1,54 @@
+
+Procesando Partición: TRAIN
+
+METRICAS SAC TRAIN
+Modelo                         | Cap. Final ($)  | Recompensa | Sharpe   | MaxDD(%) | Rotación(%)
+----------------------------------------------------------------------------------------------------
+Rebalanceo Constante (CRP)     | $7591.15        | 0.0000     | -0.07    | 59.40    | 0.00      
+Naive B&H (50/50)              | $7036.56        | 0.0000     | -0.13    | 60.02    | 0.00      
+Lambda_0p3_Friccion_Media      | $4725.72        | 0.2196     | -0.52    | 72.47    | 1.91      
+Lambda_0p7_Friccion_Alta       | $4690.74        | -0.0711    | -0.59    | 72.54    | 1.89      
+Lambda_0p3_Friccion_Alta       | $4684.96        | 0.2130     | -0.53    | 72.69    | 1.91      
+Lambda_0p7_Friccion_Baja       | $4677.81        | -0.0541    | -0.59    | 72.63    | 1.90      
+Lambda_0p3_Friccion_Baja       | $4666.84        | 0.2721     | -0.58    | 72.86    | 1.87      
+Lambda_0p7_Friccion_Media      | $4652.18        | -0.0587    | -0.60    | 72.79    | 1.90      
+Lambda_1p1_Friccion_Baja       | $4539.34        | -0.3524    | -0.66    | 72.24    | 1.93      
+Lambda_1p1_Friccion_Media      | $4503.92        | -0.3585    | -0.66    | 72.43    | 1.93      
+Lambda_1p1_Friccion_Alta       | $4445.68        | -0.3670    | -0.68    | 72.70    | 1.92      
+----------------------------------------------------------------------------------------------------
+
+Procesando Partición: VAL
+
+METRICAS SAC VAL
+Modelo                         | Cap. Final ($)  | Recompensa | Sharpe   | MaxDD(%) | Rotación(%)
+----------------------------------------------------------------------------------------------------
+Rebalanceo Constante (CRP)     | $11585.96       | 0.0000     | 1.24     | 8.76     | 0.00      
+Naive B&H (50/50)              | $11415.23       | 0.0000     | 1.09     | 9.12     | 0.00      
+Lambda_0p3_Friccion_Baja       | $11376.62       | 0.0202     | 2.75     | 4.69     | 1.71      
+Lambda_0p7_Friccion_Baja       | $11376.62       | 0.0152     | 2.75     | 4.69     | 1.71      
+Lambda_1p1_Friccion_Baja       | $11376.62       | 0.0101     | 2.75     | 4.69     | 1.70      
+Lambda_0p3_Friccion_Media      | $11371.29       | 0.0197     | 2.74     | 4.69     | 1.72      
+Lambda_0p7_Friccion_Media      | $11371.29       | 0.0147     | 2.74     | 4.69     | 1.71      
+Lambda_1p1_Friccion_Media      | $11371.29       | 0.0097     | 2.74     | 4.69     | 1.71      
+Lambda_0p3_Friccion_Alta       | $11362.88       | 0.0189     | 2.73     | 4.69     | 1.73      
+Lambda_0p7_Friccion_Alta       | $11362.88       | 0.0139     | 2.73     | 4.69     | 1.72      
+Lambda_1p1_Friccion_Alta       | $11362.88       | 0.0089     | 2.73     | 4.69     | 1.72      
+----------------------------------------------------------------------------------------------------
+
+Procesando Partición: TEST
+
+METRICAS SAC TEST
+Modelo                         | Cap. Final ($)  | Recompensa | Sharpe   | MaxDD(%) | Rotación(%)
+----------------------------------------------------------------------------------------------------
+Naive B&H (50/50)              | $14866.59       | 0.0000     | 4.30     | 2.26     | 0.00      
+Rebalanceo Constante (CRP)     | $14632.04       | 0.0000     | 4.63     | 2.16     | 0.00      
+Lambda_1p1_Friccion_Alta       | $11499.84       | 0.0166     | 2.29     | 8.93     | 1.81      
+Lambda_1p1_Friccion_Baja       | $11375.77       | 0.0154     | 2.11     | 8.93     | 1.96      
+Lambda_0p7_Friccion_Media      | $11365.89       | 0.0197     | 2.09     | 8.93     | 1.97      
+Lambda_1p1_Friccion_Media      | $11359.56       | 0.0139     | 2.09     | 8.93     | 1.97      
+Lambda_0p7_Friccion_Alta       | $11340.63       | 0.0175     | 2.06     | 8.93     | 1.98      
+Lambda_0p3_Friccion_Baja       | $11121.46       | 0.0267     | 1.72     | 8.93     | 2.07      
+Lambda_0p7_Friccion_Baja       | $11115.38       | 0.0199     | 1.72     | 8.93     | 2.06      
+Lambda_0p3_Friccion_Media      | $11105.80       | 0.0253     | 1.70     | 8.93     | 2.07      
+Lambda_0p3_Friccion_Alta       | $11080.90       | 0.0230     | 1.67     | 8.93     | 2.08      
+----------------------------------------------------------------------------------------------------
