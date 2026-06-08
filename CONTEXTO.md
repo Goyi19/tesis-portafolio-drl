@@ -7,10 +7,11 @@
 * **Objetivo Principal:** Desarrollar y comparar políticas de asignación de portafolio mediante algoritmos PPO y SAC que maximicen el retorno ajustado por riesgo y costos de transacción, frente a modelos deterministas clásicos (GAMS) y estrategias Buy-and-Hold.
 
 ## 2. Estado Actual del Proyecto
-* **Fase de Desarrollo y Código (Completada):** Ya se ha implementado con éxito todo el entorno computacional en Python y se han corrido los experimentos.
+* **Fase de Desarrollo y Código (Completada):** Ya se ha implementado con éxito todo el entorno computacional en Python y se han corrido todos los experimentos, incluyendo la generación de todos los benchmarks.
   * Entorno Gym (`portfolio_env.py`) creado.
   * Agentes DRL (`ppo_agent.py` y `sac_agent.py`) entrenados e implementados.
   * Análisis de sensibilidad (aversión al riesgo $\lambda$ y costos de transacción $c_i$) ejecutados. Todos los gráficos de métricas y validación están generados en la carpeta `results/figures/`.
+  * Benchmark Teórico de GAMS extraído completamente (Grilla de Sensibilidad + Modelo Base) e integrado en scripts locales listos para graficar junto a PPO y SAC.
 * **Fase de Escritura de la Memoria (Actual):** Nos encontramos redactando la memoria formal de título en base al documento "Estructura Capitulos Memoria". El documento abarca 6 capítulos principales (Introducción, Marco Teórico, Metodología, Implementación y Resultados, Sensibilidad y Conclusiones).
 
 ## 3. Decisiones Clave y Metodología
@@ -19,8 +20,9 @@
 * **Rúbrica de Redacción (Crítico):** Toda la escritura debe seguir formato estrictamente académico: tercera persona (voz impersonal), estilo formal, párrafos con una sola idea principal, uso de conectores discursivos, y estilo de citas Harvard.
 
 ## 4. Próximos Pasos Inmediatos
-* **Hito 2 Finalizado:** El documento técnico del Hito 2 fue entregado con éxito, integrando análisis profundo de PPO y SAC junto con tablas numéricas duras de evaluación en *Test*. Queda pendiente a futuro integrar la curva GAMS (externo).
-* **Paso Actual:** Foco 100% en la redacción formal de la memoria de título en Google Docs. La IA actúa como "Co-escritor" y "Revisor de Estilo" respetando estrictamente la "Rúbrica de Escritura" (voz impersonal, citas Harvard, conectores).
+* **Hito 2 Finalizado:** El documento técnico del Hito 2 fue entregado con éxito, integrando análisis profundo de PPO y SAC junto con tablas numéricas duras de evaluación en *Test*.
+* **Extracción de GAMS Finalizada:** Las curvas óptimas de GAMS para la grilla de sensibilidad y el modelo base ya se encuentran almacenadas localmente en `data/Gams_results/`. Ya no se requiere uso del PC remoto para correr GAMS.
+* **Paso Actual:** Foco 100% en la redacción formal de la memoria de título en Google Docs integrando los resultados de PPO, SAC y el benchmark superior de GAMS. La IA actúa como "Co-escritor" y "Revisor de Estilo" respetando estrictamente la "Rúbrica de Escritura" (voz impersonal, citas Harvard, conectores).
 * *(Nota: Actualizar este punto al finalizar cada sesión para registrar en qué capítulo vamos)*.
 
 ---
